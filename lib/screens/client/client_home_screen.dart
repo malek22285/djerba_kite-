@@ -1,19 +1,60 @@
 import 'package:flutter/material.dart';
 import '../../services/local_auth_service.dart';
+import '../../services/stage_service.dart';
+import '../../models/stage.dart';
+import '../../widgets/stage_card.dart';
 import '../auth/login_screen.dart';
 
-class ClientHomeScreen extends StatelessWidget {
+class ClientHomeScreen extends StatefulWidget {
+  @override
+  _ClientHomeScreenState createState() => _ClientHomeScreenState();
+}
+
+class _ClientHomeScreenState extends State<ClientHomeScreen> {
   final _authService = LocalAuthService();
+  final _stageService = StageService();
+  
+  List<Stage> _stages = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStages();
+  }
+
+  Future<void> _loadStages() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final stages = await _stageService.getAllStages();
+      setState(() {
+        _stages = stages;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur de chargement')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.getCurrentUser();
-    
     return Scaffold(
       appBar: AppBar(
         title: Text('DjerbaKite'),
         backgroundColor: Color(0xFF2a5298),
         actions: [
+          IconButton(
+            icon: Icon(Icons.person),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Mes réservations bientôt')),
+              );
+            },
+          ),
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () async {
@@ -25,26 +66,20 @@ class ClientHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('🪁', style: TextStyle(fontSize: 60)),
-            SizedBox(height: 20),
-            Text(
-              'Bienvenue ${user?['prenom']}!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadStages,
+              child: _stages.isEmpty
+                  ? Center(child: Text('Aucun stage disponible'))
+                  : ListView.builder(
+                      padding: EdgeInsets.all(16),
+                      itemCount: _stages.length,
+                      itemBuilder: (context, index) {
+                        return StageCard(stage: _stages[index]);
+                      },
+                    ),
             ),
-            SizedBox(height: 10),
-            Text(
-              'Interface Client',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            SizedBox(height: 40),
-            Text('TODO: Liste des stages', style: TextStyle(fontSize: 14)),
-          ],
-        ),
-      ),
     );
   }
 }
