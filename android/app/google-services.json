@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "336341170657",
+    "project_id": "djerba-kite-dev-be30f",
+    "storage_bucket": "djerba-kite-dev-be30f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:336341170657:android:0e19c0aea54c1cc2e57aa0",
+        "android_client_info": {
+          "package_name": "com.example.djerba_kite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAS-5yUs82Nbn5e9usH6NXB1gSzxZhI2nA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
