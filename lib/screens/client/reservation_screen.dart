@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../models/stage.dart';
 import '../../services/local_auth_service.dart';
 import '../../services/reservation_service.dart';
-import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/date_time_picker.dart';
+import '../../widgets/voucher_section.dart';
+import '../../widgets/reservation_button.dart';
+import '../../widgets/stage_info_card.dart';
 
 class ReservationScreen extends StatefulWidget {
   final Stage stage;
@@ -38,7 +40,6 @@ class _ReservationScreenState extends State<ReservationScreen> {
   @override
   void initState() {
     super.initState();
-    // Pré-remplir le téléphone avec celui du profil
     final user = _authService.getCurrentUser();
     _phoneController.text = user?['telephone'] ?? '';
   }
@@ -51,194 +52,93 @@ class _ReservationScreenState extends State<ReservationScreen> {
         backgroundColor: Color(0xFF2a5298),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24),
+        padding: EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildStageInfo(),
-              SizedBox(height: 32),
-              _buildDatePicker(),
-              SizedBox(height: 16),
-              _buildTimePicker(),
-              SizedBox(height: 16),
-              _buildNiveauDropdown(),
-              SizedBox(height: 16),
-              _buildPhoneField(),
+              StageInfoCard(stage: widget.stage),
               SizedBox(height: 24),
-              _buildVoucherSection(),
+              
+              Text(
+                'Informations de réservation',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              
+              DateTimePicker(
+                label: 'Date souhaitée *',
+                icon: Icons.calendar_today,
+                selectedDate: _selectedDate,
+                onTap: _pickDate,
+                isDate: true,
+              ),
+              SizedBox(height: 16),
+              
+              DateTimePicker(
+                label: 'Heure souhaitée *',
+                icon: Icons.access_time,
+                selectedTime: _selectedTime,
+                onTap: _pickTime,
+                isDate: false,
+              ),
+              SizedBox(height: 16),
+              
+              DropdownButtonFormField<String>(
+                value: _selectedNiveau,
+                decoration: InputDecoration(
+                  labelText: 'Votre niveau *',
+                  prefixIcon: Icon(Icons.show_chart, color: Color(0xFF2a5298)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                items: _niveaux.map((niveau) {
+                  return DropdownMenuItem(value: niveau, child: Text(niveau));
+                }).toList(),
+                onChanged: (value) => setState(() => _selectedNiveau = value!),
+              ),
+              SizedBox(height: 16),
+              
+              CustomTextField(
+                controller: _phoneController,
+                label: 'Numéro de téléphone *',
+                icon: Icons.phone,
+                keyboardType: TextInputType.phone,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Téléphone requis';
+                  if (value.length < 8) return 'Numéro invalide';
+                  return null;
+                },
+              ),
+              SizedBox(height: 24),
+              
+              VoucherSection(
+                hasVoucher: _hasVoucher,
+                onChanged: (value) => setState(() => _hasVoucher = value!),
+                controller: _voucherController,
+                validator: _hasVoucher
+                    ? (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Code voucher requis';
+                        }
+                        return null;
+                      }
+                    : null,
+              ),
               SizedBox(height: 32),
-              _buildSubmitButton(),
+              
+              ReservationButton(
+                text: 'Envoyer la demande',
+                onPressed: _handleSubmit,
+                isLoading: _isLoading,
+              ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildStageInfo() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.stage.nom,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2a5298),
-            ),
-          ),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-              SizedBox(width: 4),
-              Text('${widget.stage.duree}h'),
-              SizedBox(width: 16),
-              Icon(Icons.payments, size: 16, color: Colors.grey[600]),
-              SizedBox(width: 4),
-              Text('${widget.stage.getPrixFinal().toStringAsFixed(0)} TND'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDatePicker() {
-    return InkWell(
-      onTap: _pickDate,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Date souhaitée *',
-          prefixIcon: Icon(Icons.calendar_today),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: Colors.white,
-        ),
-        child: Text(
-          _selectedDate == null
-              ? 'Sélectionner une date'
-              : DateFormat('dd/MM/yyyy').format(_selectedDate!),
-          style: TextStyle(
-            color: _selectedDate == null ? Colors.grey : Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimePicker() {
-    return InkWell(
-      onTap: _pickTime,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Heure souhaitée *',
-          prefixIcon: Icon(Icons.access_time),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: Colors.white,
-        ),
-        child: Text(
-          _selectedTime == null
-              ? 'Sélectionner une heure'
-              : _selectedTime!.format(context),
-          style: TextStyle(
-            color: _selectedTime == null ? Colors.grey : Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNiveauDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedNiveau,
-      decoration: InputDecoration(
-        labelText: 'Votre niveau *',
-        prefixIcon: Icon(Icons.show_chart),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-      items: _niveaux.map((niveau) {
-        return DropdownMenuItem(
-          value: niveau,
-          child: Text(niveau),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() => _selectedNiveau = value!);
-      },
-    );
-  }
-
-  Widget _buildPhoneField() {
-    return CustomTextField(
-      controller: _phoneController,
-      label: 'Numéro de téléphone *',
-      icon: Icons.phone,
-      keyboardType: TextInputType.phone,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Téléphone requis';
-        }
-        if (value.length < 8) {
-          return 'Numéro invalide';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildVoucherSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: _hasVoucher,
-              onChanged: (value) {
-                setState(() => _hasVoucher = value!);
-              },
-            ),
-            Text('J\'ai un voucher'),
-          ],
-        ),
-        if (_hasVoucher) ...[
-          SizedBox(height: 8),
-          CustomTextField(
-            controller: _voucherController,
-            label: 'Code voucher',
-            icon: Icons.confirmation_number,
-            validator: _hasVoucher
-                ? (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Code voucher requis';
-                    }
-                    return null;
-                  }
-                : null,
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return CustomButton(
-      text: 'Envoyer la demande',
-      onPressed: _handleSubmit,
-      isLoading: _isLoading,
     );
   }
 
@@ -259,9 +159,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
       },
     );
     
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
   Future<void> _pickTime() async {
@@ -278,27 +176,14 @@ class _ReservationScreenState extends State<ReservationScreen> {
       },
     );
     
-    if (picked != null) {
-      setState(() => _selectedTime = picked);
-    }
+    if (picked != null) setState(() => _selectedTime = picked);
   }
 
   void _handleSubmit() async {
-    // Validation des champs obligatoires
-    if (_selectedDate == null) {
+    if (_selectedDate == null || _selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez sélectionner une date'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (_selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veuillez sélectionner une heure'),
+          content: Text('Veuillez sélectionner une date et une heure'),
           backgroundColor: Colors.red,
         ),
       );
@@ -312,7 +197,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
     try {
       final user = _authService.getCurrentUser()!;
       
-      final reservation = await _reservationService.createReservation(
+      await _reservationService.createReservation(
         userId: user['email'],
         userEmail: user['email'],
         userName: '${user['prenom']} ${user['nom']}',
@@ -328,12 +213,18 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
       if (!mounted) return;
 
-      // Succès
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: Text('✓ Demande envoyée'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 12),
+              Text('Demande envoyée'),
+            ],
+          ),
           content: Text(
             'Votre demande de réservation a été envoyée avec succès.\n\n'
             'Vous recevrez une notification WhatsApp dès validation par notre équipe.',
@@ -341,10 +232,13 @@ class _ReservationScreenState extends State<ReservationScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Ferme dialog
-                Navigator.of(context).pop(); // Retour à la liste des stages
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
               },
-              child: Text('OK'),
+              style: TextButton.styleFrom(
+                foregroundColor: Color(0xFF2a5298),
+              ),
+              child: Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),

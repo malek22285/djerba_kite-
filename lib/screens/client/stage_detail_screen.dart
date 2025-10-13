@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../models/stage.dart';
 import '../../widgets/niveau_badge.dart';
 import '../../widgets/prix_display.dart';
+import '../../widgets/gradient_header.dart';
+import '../../widgets/info_section.dart';
+import '../../widgets/bottom_action_button.dart';
 import 'reservation_screen.dart';
 
 class StageDetailScreen extends StatelessWidget {
@@ -20,40 +23,22 @@ class StageDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            GradientHeader(title: stage.nom),
             _buildContent(),
           ],
         ),
       ),
-      bottomNavigationBar: _buildReserverButton(context),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2a5298), Color(0xFF1e3c72)],
-        ),
-      ),
-      child: Column(
-        children: [
-          Text('🪁', style: TextStyle(fontSize: 80)),
-          SizedBox(height: 16),
-          Text(
-            stage.nom,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+      bottomNavigationBar: BottomActionButton(
+        text: 'Réserver ce stage',
+        icon: Icons.calendar_today,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ReservationScreen(stage: stage),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -64,104 +49,48 @@ class StageDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Badges info
           Row(
             children: [
               NiveauBadge(niveau: stage.niveauRequis, fontSize: 14),
               SizedBox(width: 12),
-              Icon(Icons.access_time, color: Colors.grey[600]),
+              Icon(Icons.access_time, color: Colors.grey[600], size: 18),
               SizedBox(width: 4),
               Text(
-                '${stage.duree} heure${stage.duree > 1 ? 's' : ''}',
+                '${stage.duree}h',
                 style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
             ],
           ),
           SizedBox(height: 24),
           
-          Text(
-            'Description',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Text(
-            stage.description,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[700],
-              height: 1.5,
+          // Description
+          InfoSection(
+            title: 'Description',
+            padding: EdgeInsets.all(16),
+            backgroundColor: Colors.white,
+            child: Text(
+              stage.description,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+                height: 1.5,
+              ),
             ),
           ),
-          SizedBox(height: 32),
+          SizedBox(height: 24),
           
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tarif',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                SizedBox(height: 12),
-                PrixDisplay(
-                  stage: stage,
-                  prixFontSize: 32,
-                  eurFontSize: 16,
-                ),
-              ],
+          // Prix
+          InfoSection(
+            title: 'Tarif',
+            child: PrixDisplay(
+              stage: stage,
+              prixFontSize: 32,
+              eurFontSize: 16,
             ),
           ),
         ],
       ),
     );
   }
-
- 
-Widget _buildReserverButton(BuildContext context) {
-  return SafeArea(
-    child: Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ReservationScreen(stage: stage),
-            ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFF2a5298),
-          padding: EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          'Réserver ce stage',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ),
-    ),
-  );
-}
 }
