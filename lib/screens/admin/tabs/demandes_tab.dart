@@ -123,6 +123,7 @@ class _DemandesTabState extends State<DemandesTab> {
         dateProposee: result['date'],
         heureProposee: result['time'].format(context),
         motif: result['motif'],
+        remiseIndividuelle: result['remise'],
       );
 
       ScaffoldMessenger.of(context).showSnackBar(

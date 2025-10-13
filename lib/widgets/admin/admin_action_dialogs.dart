@@ -256,7 +256,7 @@ class _ProposeDialog extends StatefulWidget {
 class _ProposeDialogState extends State<_ProposeDialog> {
   late DateTime selectedDate;
   late TimeOfDay selectedTime;
-
+ final remiseController = TextEditingController(text: '0');
   @override
   void initState() {
     super.initState();
@@ -289,6 +289,13 @@ class _ProposeDialogState extends State<_ProposeDialog> {
               icon: Icons.notes,
               maxLines: 3,
             ),
+             SizedBox(height: 12),
+            CustomTextField(  // ← AJOUTE CE CHAMP
+              controller: remiseController,
+              label: 'Remise (TND)',
+              icon: Icons.discount,
+              keyboardType: TextInputType.number,
+            ),
           ],
         ),
       ),
@@ -303,6 +310,7 @@ class _ProposeDialogState extends State<_ProposeDialog> {
               'date': selectedDate,
               'time': selectedTime,
               'motif': widget.motifController.text.trim(),
+              'remise': double.tryParse(remiseController.text) ?? 0,
             });
           },
           style: ElevatedButton.styleFrom(
@@ -361,5 +369,10 @@ class _ProposeDialogState extends State<_ProposeDialog> {
         child: Text(selectedTime.format(context)),
       ),
     );
+  }
+   @override
+  void dispose() {
+    remiseController.dispose(); // ← AJOUTE ÇA
+    super.dispose();
   }
 }

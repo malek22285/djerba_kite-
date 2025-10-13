@@ -137,6 +137,7 @@ Future<void> proposeAlternative({
   required DateTime dateProposee,
   required String heureProposee,
   String? motif,
+  double remiseIndividuelle = 0,
 }) async {
   await Future.delayed(Duration(milliseconds: 500));
   
@@ -158,9 +159,10 @@ Future<void> proposeAlternative({
       heureConfirmee: heureProposee,
       statut: 'refusee', // Statut refusée avec proposition
       niveauClient: old.niveauClient,
-      prixFinal: old.prixFinal,
+      prixFinal: old.prixFinal - remiseIndividuelle,
       voucherCode: old.voucherCode,
       notesAdmin: motif ?? 'Créneau non disponible. Nouvelle proposition envoyée.',
+      remiseIndividuelle: remiseIndividuelle,
       createdAt: old.createdAt,
     );
   }
@@ -255,5 +257,36 @@ Future<Map<String, dynamic>> getStatsForMonth({
     'repartitionStages': repartitionStages,
     'vouchersUtilises': vouchersUtilises,
   };
+}
+// Accepter une proposition alternative (client)
+Future<void> acceptProposal(String reservationId) async {
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  final index = _reservations.indexWhere((r) => r.id == reservationId);
+  if (index == -1) throw Exception('Réservation introuvable');
+  
+  final old = _reservations[index];
+  
+  // La proposition devient la réservation confirmée
+  _reservations[index] = Reservation(
+    id: old.id,
+    userId: old.userId,
+    userEmail: old.userEmail,
+    userName: old.userName,
+    userPhone: old.userPhone,
+    stageId: old.stageId,
+    stageName: old.stageName,
+    dateDemande: old.dateDemande,
+    heureDemande: old.heureDemande,
+    dateConfirmee: old.dateConfirmee, // Date proposée par admin
+    heureConfirmee: old.heureConfirmee, // Heure proposée par admin
+    statut: 'confirmee', // ← CHANGE LE STATUT
+    niveauClient: old.niveauClient,
+    prixFinal: old.prixFinal,
+    voucherCode: old.voucherCode,
+    notesAdmin: 'Proposition acceptée par le client',
+    remiseIndividuelle: old.remiseIndividuelle,
+    createdAt: old.createdAt,
+  );
 }
 }

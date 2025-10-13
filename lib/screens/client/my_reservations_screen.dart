@@ -154,9 +154,110 @@ void _handleCancel(Reservation reservation) async {
 }
 
   void _handleAcceptProposal(Reservation reservation) async {
-    // TODO: Implémenter l'acceptation de proposition (feature admin)
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Icon(Icons.check_circle, color: Colors.green),
+          SizedBox(width: 8),
+          Text('Accepter la proposition ?'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Vous allez confirmer la réservation pour:',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          SizedBox(height: 12),
+          _buildProposalInfo(reservation), // ← Widget pour afficher les détails
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text('Annuler'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+          ),
+          child: Text('Accepter'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true) return;
+
+  try {
+    await _reservationService.acceptProposal(reservation.id);
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Acceptation de proposition - À implémenter')),
+      SnackBar(
+        content: Text('✓ Réservation confirmée'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    
+    _loadReservations();
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erreur: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ),
     );
   }
+}
+
+// Ajoute ce widget helper dans la même classe
+Widget _buildProposalInfo(Reservation reservation) {
+  return Container(
+    padding: EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.green.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.green.withOpacity(0.3)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInfoRow('📅', 'Date', 
+          '${reservation.dateConfirmee!.day}/${reservation.dateConfirmee!.month}/${reservation.dateConfirmee!.year}'),
+        SizedBox(height: 6),
+        _buildInfoRow('🕒', 'Heure', reservation.heureConfirmee!),
+        SizedBox(height: 6),
+        _buildInfoRow('🪁', 'Stage', reservation.stageName),
+        SizedBox(height: 6),
+        _buildInfoRow('💰', 'Prix', '${reservation.prixFinal.toStringAsFixed(0)} TND'),
+      ],
+    ),
+  );
+}
+
+Widget _buildInfoRow(String emoji, String label, String value) {
+  return Row(
+    children: [
+      Text(emoji, style: TextStyle(fontSize: 16)),
+      SizedBox(width: 8),
+      Text(
+        '$label: ',
+        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+      ),
+      Expanded(
+        child: Text(
+          value,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  );
+}
 }

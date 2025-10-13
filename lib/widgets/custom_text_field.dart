@@ -6,7 +6,7 @@ class CustomTextField extends StatelessWidget {
   final int? maxLines;
   final IconData icon;
   final bool obscureText;
-  final TextInputType keyboardType;
+  final TextInputType? keyboardType;
   final String? Function(String?)? validator;
 
   const CustomTextField({
@@ -15,7 +15,7 @@ class CustomTextField extends StatelessWidget {
     required this.label,
     required this.icon,
     this.obscureText = false,
-    this.keyboardType = TextInputType.text,
+    this.keyboardType,
     this.maxLines = 1,
     this.validator,
   }) : super(key: key);
