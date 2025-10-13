@@ -4,6 +4,7 @@ import '../../services/stage_service.dart';
 import '../../models/stage.dart';
 import '../../widgets/stage_card.dart';
 import '../auth/login_screen.dart';
+import 'my_reservations_screen.dart';
 
 class ClientHomeScreen extends StatefulWidget {
   @override
@@ -47,24 +48,25 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
         title: Text('DjerbaKite'),
         backgroundColor: Color(0xFF2a5298),
         actions: [
-          IconButton(
-            icon: Icon(Icons.person),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Mes réservations bientôt')),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () async {
-              await _authService.signOut();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => LoginScreen()),
-              );
-            },
-          ),
-        ],
+  IconButton(
+    icon: Icon(Icons.history),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MyReservationsScreen()),
+      );
+    },
+  ),
+  IconButton(
+    icon: Icon(Icons.logout),
+    onPressed: () async {
+      await _authService.signOut();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+      );
+    },
+  ),
+],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())

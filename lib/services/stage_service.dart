@@ -56,4 +56,83 @@ class StageService {
       return null;
     }
   }
+  // Créer un stage
+Future<Stage> createStage({
+  required String nom,
+  required String description,
+  required int duree,
+  required double prixTnd,
+  required String niveauRequis,
+  double remisePourcentage = 0,
+}) async {
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  final newStage = Stage(
+    id: 'STAGE${_stages.length + 1}',
+    nom: nom,
+    description: description,
+    duree: duree,
+    prixTnd: prixTnd,
+    niveauRequis: niveauRequis,
+    actif: true,
+    remisePourcentage: remisePourcentage,
+  );
+  
+  _stages.add(newStage);
+  return newStage;
+}
+
+// Modifier un stage
+Future<void> updateStage({
+  required String id,
+  required String nom,
+  required String description,
+  required int duree,
+  required double prixTnd,
+  required String niveauRequis,
+  required double remisePourcentage,
+  required bool actif,
+}) async {
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  final index = _stages.indexWhere((s) => s.id == id);
+  if (index != -1) {
+    _stages[index] = Stage(
+      id: id,
+      nom: nom,
+      description: description,
+      duree: duree,
+      prixTnd: prixTnd,
+      niveauRequis: niveauRequis,
+      actif: actif,
+      remisePourcentage: remisePourcentage,
+    );
+  }
+}
+
+// Supprimer un stage (désactivation plutôt que suppression réelle)
+Future<void> deleteStage(String id) async {
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  final index = _stages.indexWhere((s) => s.id == id);
+  if (index != -1) {
+    final old = _stages[index];
+    _stages[index] = Stage(
+      id: old.id,
+      nom: old.nom,
+      description: old.description,
+      duree: old.duree,
+      prixTnd: old.prixTnd,
+      niveauRequis: old.niveauRequis,
+      actif: false, // Désactivé
+      remisePourcentage: old.remisePourcentage,
+    );
+  }
+}
+
+// Récupérer TOUS les stages (même inactifs) pour l'admin
+Future<List<Stage>> getAllStagesForAdmin() async {
+  await Future.delayed(Duration(milliseconds: 500));
+  return List.from(_stages);
+}
 }
