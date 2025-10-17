@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/stage.dart';
-import '../services/stage_service.dart';
+import '../services/firebase_stage_service.dart';
 
 class PrixDisplay extends StatelessWidget {
   final Stage stage;

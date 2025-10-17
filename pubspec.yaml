@@ -31,13 +31,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Versions ANCIENNES mais STABLES
-  firebase_core: ^2.15.0
-  firebase_auth: ^4.7.0
-  cloud_firestore: ^4.8.0
-  intl: ^0.18.1 #
-  cupertino_icons: ^1.0.2
+  # Laisse les ^ pour compatibilité automatique
+  firebase_core: ^2.10.0
+  firebase_auth: ^4.2.2
+  cloud_firestore: ^4.5.0
 
+  intl: ^0.17.0
+  cupertino_icons: ^1.0.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

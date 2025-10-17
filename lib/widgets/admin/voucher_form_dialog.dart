@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/stage_service.dart';
+import '../../services/firebase_stage_service.dart';
 import '../../models/stage.dart';
 import '../custom_text_field.dart';
 

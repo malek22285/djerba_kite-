@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../services/stage_service.dart';
+//import '../../../services/stage_service.dart';
+import '../../../services/firebase_stage_service.dart';
 import '../../../models/stage.dart';
 import '../../../widgets/admin/admin_stage_card.dart';
 import '../../../widgets/admin/stage_form_dialog.dart';
@@ -13,7 +14,7 @@ class StagesTab extends StatefulWidget {
 }
 
 class _StagesTabState extends State<StagesTab> {
-  final _stageService = StageService();
+  final _stageService = FirebaseStageService();
   List<Stage> _stages = [];
   bool _isLoading = true;
   bool _showInactive = false;
@@ -24,14 +25,20 @@ class _StagesTabState extends State<StagesTab> {
     _loadStages();
   }
 
-  Future<void> _loadStages() async {
-    setState(() => _isLoading = true);
-    final stages = await _stageService.getAllStagesForAdmin();
+Future<void> _loadStages() async {
+  setState(() => _isLoading = true);
+  
+  try {
+    final stages = await _stageService.getAllStages();
     setState(() {
       _stages = stages;
       _isLoading = false;
     });
+  } catch (e) {
+    setState(() => _isLoading = false);
+    print('Erreur chargement stages: $e');
   }
+}
 
   @override
   Widget build(BuildContext context) {

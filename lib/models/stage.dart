@@ -6,7 +6,7 @@ class Stage {
   final double prixTnd;
   final String niveauRequis;
   final bool actif;
-  final double remisePourcentage;
+  final int remisePourcentage;
 
   Stage({
     required this.id,
@@ -32,30 +32,30 @@ class Stage {
     return prixTnd;
   }
 
-  // Conversion depuis Map (pour Firestore plus tard)
-  factory Stage.fromMap(Map<String, dynamic> map, String id) {
+  // Conversion depuis Map Firestore - CORRIGÉ
+  factory Stage.fromMap(String id, Map<String, dynamic> map) {
     return Stage(
       id: id,
       nom: map['nom'] ?? '',
       description: map['description'] ?? '',
       duree: map['duree'] ?? 0,
-      prixTnd: (map['prix_tnd'] ?? 0).toDouble(),
-      niveauRequis: map['niveau_requis'] ?? '',
+      prixTnd: (map['prixTnd'] ?? 0).toDouble(), // ← CORRIGÉ
+      niveauRequis: map['niveauRequis'] ?? '',    // ← CORRIGÉ
       actif: map['actif'] ?? true,
-      remisePourcentage: (map['remise_pourcentage'] ?? 0).toDouble(),
+      remisePourcentage: (map['remisePourcentage'] ?? 0).toInt(), // ← CORRIGÉ
     );
   }
 
-  // Conversion vers Map (pour Firestore plus tard)
+  // Conversion vers Map Firestore
   Map<String, dynamic> toMap() {
     return {
       'nom': nom,
       'description': description,
       'duree': duree,
-      'prix_tnd': prixTnd,
-      'niveau_requis': niveauRequis,
+      'prixTnd': prixTnd,
+      'niveauRequis': niveauRequis,
       'actif': actif,
-      'remise_pourcentage': remisePourcentage,
+      'remisePourcentage': remisePourcentage,
     };
   }
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/auth_container.dart';
-import '../../services/local_auth_service.dart';
+//import '../../services/local_auth_service.dart';
+import '../../services/firebase_auth_service.dart';
 import '../client/client_home_screen.dart';
 import '../admin/admin_home_screen.dart';
 import 'register_screen.dart';
@@ -16,7 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = LocalAuthService();
+  //final _authService = LocalAuthService();
+  final FirebaseAuthService _authService = FirebaseAuthService();
   bool _isLoading = false;
 
   @override
@@ -74,39 +76,58 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+void _handleLogin() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final user = await _authService.signIn(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+  print('🔵 Début connexion...');
+  print('📧 Email: ${_emailController.text.trim()}');
 
-      if (!mounted) return;
+  try {
+    print('🔵 Appel signIn()...');
+    
+    final user = await _authService.signIn(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => user['role'] == 'admin'
-              ? AdminHomeScreen()
-              : ClientHomeScreen(),
-        ),
-      );
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    print('✅ signIn() réussi!');
+    print('👤 User data: $user');
+    print('🎭 Role: ${user['role']}');
+
+    if (!mounted) return;
+
+    print('🔵 Navigation vers écran ${user['role']}...');
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => user['role'] == 'admin'
+            ? AdminHomeScreen()
+            : ClientHomeScreen(),
+      ),
+    );
+
+    print('✅ Navigation réussie!');
+
+  } catch (e, stackTrace) {
+    print('❌ ERREUR ATTRAPÉE:');
+    print('Type: ${e.runtimeType}');
+    print('Message: $e');
+    print('Stack trace:');
+    print(stackTrace);
+
+    setState(() => _isLoading = false);
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.toString().replaceAll('Exception: ', '')),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
-
+}
   @override
   void dispose() {
     _emailController.dispose();

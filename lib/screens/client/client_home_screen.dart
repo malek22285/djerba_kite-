@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/local_auth_service.dart';
-import '../../services/stage_service.dart';
+//import '../../services/stage_service.dart';
+import '../../services/firebase_stage_service.dart';
 import '../../models/stage.dart';
 import '../../widgets/stage_card.dart';
 import '../auth/login_screen.dart';
@@ -13,7 +14,7 @@ class ClientHomeScreen extends StatefulWidget {
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
   final _authService = LocalAuthService();
-  final _stageService = StageService();
+  final _stageService = FirebaseStageService();
   
   List<Stage> _stages = [];
   bool _isLoading = true;
@@ -25,21 +26,19 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
   }
 
   Future<void> _loadStages() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      final stages = await _stageService.getAllStages();
-      setState(() {
-        _stages = stages;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur de chargement')),
-      );
-    }
+  setState(() => _isLoading = true);
+  
+  try {
+    final stages = await _stageService.getAllStages();
+    setState(() {
+      _stages = stages;
+      _isLoading = false;
+    });
+  } catch (e) {
+    setState(() => _isLoading = false);
+    print('Erreur chargement stages: $e');
   }
+}
 
   @override
   Widget build(BuildContext context) {
