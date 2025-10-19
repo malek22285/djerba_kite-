@@ -25,18 +25,28 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
     _loadStages();
   }
 
-  Future<void> _loadStages() async {
+ Future<void> _loadStages() async {
+  print('🔵 CLIENT: Début chargement stages...');
   setState(() => _isLoading = true);
   
   try {
+    print('🔵 CLIENT: Appel getAllStages()...');
     final stages = await _stageService.getAllStages();
+    print('✅ CLIENT: Stages récupérés: ${stages.length}');
+    
+    for (var stage in stages) {
+      print('  - ${stage.nom} (actif: ${stage.actif})');
+    }
+    
     setState(() {
       _stages = stages;
       _isLoading = false;
     });
-  } catch (e) {
+    print('✅ CLIENT: setState terminé, affichage: ${_stages.length} stages');
+  } catch (e, stackTrace) {
+    print('❌ CLIENT ERREUR: $e');
+    print('Stack: $stackTrace');
     setState(() => _isLoading = false);
-    print('Erreur chargement stages: $e');
   }
 }
 

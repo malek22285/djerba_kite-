@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/stage.dart';
-import '../services/firebase_stage_service.dart';
 
 class PrixDisplay extends StatelessWidget {
   final Stage stage;
@@ -18,7 +17,7 @@ class PrixDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final prixFinal = stage.getPrixFinal();
-    final prixEur = stage.getPrixEur(StageService.tauxChangeEur);
+    final prixEur = stage.getPrixEur(3.2); // Taux fixe temporaire
     final hasRemise = stage.remisePourcentage > 0;
 
     return Column(
@@ -36,7 +35,7 @@ class PrixDisplay extends StatelessWidget {
           ),
           SizedBox(height: 2),
         ],
-        
+       
         // Prix final + badge remise
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -49,7 +48,7 @@ class PrixDisplay extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  '-${stage.remisePourcentage.toStringAsFixed(0)}%',
+                  '-${stage.remisePourcentage}%',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: prixFontSize * 0.5,
@@ -69,7 +68,7 @@ class PrixDisplay extends StatelessWidget {
             ),
           ],
         ),
-        
+       
         // Prix EUR
         Text(
           '≈ ${prixEur.toStringAsFixed(0)} EUR',

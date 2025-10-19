@@ -26,17 +26,27 @@ class _StagesTabState extends State<StagesTab> {
   }
 
 Future<void> _loadStages() async {
+  print('🔵 ADMIN: Début chargement stages...');
   setState(() => _isLoading = true);
   
   try {
-    final stages = await _stageService.getAllStages();
+    print('🔵 ADMIN: Appel getAllStagesForAdmin()...');
+    final stages = await _stageService.getAllStagesForAdmin();
+    print('✅ ADMIN: Stages récupérés: ${stages.length}');
+    
+    for (var stage in stages) {
+      print('  - ${stage.nom} (actif: ${stage.actif})');
+    }
+    
     setState(() {
       _stages = stages;
       _isLoading = false;
     });
-  } catch (e) {
+    print('✅ ADMIN: setState terminé, affichage: ${_stages.length} stages');
+  } catch (e, stackTrace) {
+    print('❌ ADMIN ERREUR: $e');
+    print('Stack: $stackTrace');
     setState(() => _isLoading = false);
-    print('Erreur chargement stages: $e');
   }
 }
 
@@ -101,7 +111,7 @@ Future<void> _loadStages() async {
       duree: result['duree'],
       prixTnd: result['prix'],
       niveauRequis: result['niveau'],
-      remisePourcentage: result['remise'],
+      remisePourcentage: (result['remise'] as num).toInt(),
     );
 
     _showSuccess('Stage créé');
@@ -122,7 +132,7 @@ Future<void> _loadStages() async {
       duree: result['duree'],
       prixTnd: result['prix'],
       niveauRequis: result['niveau'],
-      remisePourcentage: result['remise'],
+      remisePourcentage: (result['remise'] as num).toInt(),
       actif: stage.actif,
     );
 

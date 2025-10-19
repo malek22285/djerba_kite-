@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/local_auth_service.dart';
-import '../../services/reservation_service.dart';
+//import '../../services/reservation_service.dart';
+import '../../services/firebase_reservation_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/reservation.dart';
 import '../../widgets/reservation_card.dart';
 
@@ -11,16 +13,19 @@ class MyReservationsScreen extends StatefulWidget {
 
 class _MyReservationsScreenState extends State<MyReservationsScreen> {
   final _authService = LocalAuthService();
-  final _reservationService = ReservationService();
+  final FirebaseReservationService _reservationService = FirebaseReservationService();
   
   List<Reservation> _reservations = [];
   bool _isLoading = true;
 
   @override
-  void initState() {
-    super.initState();
+void initState() {
+  super.initState();
+  // Attendre que le widget soit monté avant de charger
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     _loadReservations();
-  }
+  });
+}
 
   Future<void> _loadReservations() async {
     setState(() => _isLoading = true);

@@ -15,7 +15,7 @@ class AdminStageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prixEur = stage.getPrixEur(StageService.tauxChangeEur);
+   final prixEur = stage.getPrixEur(3.2); // Taux fixe temporaire
 
     return Card(
       margin: EdgeInsets.only(bottom: 12),

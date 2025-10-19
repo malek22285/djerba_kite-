@@ -28,7 +28,7 @@ class _VoucherFormDialogState extends State<VoucherFormDialog> {
   }
 
   Future<void> _loadStages() async {
-    final stages = await StageService().getAllStages();
+    final stages = await FirebaseStageService().getAllStages();
     setState(() {
       _stages = stages;
       _isLoadingStages = false;

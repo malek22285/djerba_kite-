@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../services/reservation_service.dart';
+//import '../../../services/reservation_service.dart';
+import '../../../services/firebase_reservation_service.dart';
 import '../../../models/reservation.dart';
 import '../../../widgets/admin/planning_header.dart';
 import '../../../widgets/admin/calendar_grid.dart';
@@ -12,7 +13,7 @@ class PlanningTab extends StatefulWidget {
 }
 
 class _PlanningTabState extends State<PlanningTab> {
-  final _reservationService = ReservationService();
+  final FirebaseReservationService _reservationService = FirebaseReservationService();
   
   DateTime _currentMonth = DateTime.now();
   DateTime? _selectedDate;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../services/reservation_service.dart';
+//import '../../../services/reservation_service.dart';
+import '../../../services/firebase_reservation_service.dart';
+
 import '../../../models/reservation.dart';
 import '../../../widgets/admin/demande_card.dart';
 import '../../../widgets/admin/admin_action_dialogs.dart';
@@ -10,7 +12,7 @@ class DemandesTab extends StatefulWidget {
 }
 
 class _DemandesTabState extends State<DemandesTab> {
-  final _reservationService = ReservationService();
+ final FirebaseReservationService _reservationService = FirebaseReservationService();
   List<Reservation> _demandes = [];
   bool _isLoading = true;
 

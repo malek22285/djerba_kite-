@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../models/stage.dart';
-import '../../services/local_auth_service.dart';
-import '../../services/reservation_service.dart';
+//import '../../services/reservation_service.dart';
+import '../../services/firebase_reservation_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/date_time_picker.dart';
 import '../../widgets/voucher_section.dart';
 import '../../widgets/reservation_button.dart';
 import '../../widgets/stage_info_card.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ReservationScreen extends StatefulWidget {
   final Stage stage;
@@ -19,8 +21,7 @@ class ReservationScreen extends StatefulWidget {
 
 class _ReservationScreenState extends State<ReservationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _authService = LocalAuthService();
-  final _reservationService = ReservationService();
+  final FirebaseReservationService _reservationService = FirebaseReservationService();
   
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
@@ -40,8 +41,23 @@ class _ReservationScreenState extends State<ReservationScreen> {
   @override
   void initState() {
     super.initState();
-    final user = _authService.getCurrentUser();
-    _phoneController.text = user?['telephone'] ?? '';
+    _loadUserPhone();
+  }
+
+  Future<void> _loadUserPhone() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      
+      if (userDoc.exists && mounted) {
+        setState(() {
+          _phoneController.text = userDoc.data()?['telephone'] ?? '';
+        });
+      }
+    }
   }
 
   @override
@@ -195,12 +211,23 @@ class _ReservationScreenState extends State<ReservationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = _authService.getCurrentUser()!;
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser == null) throw Exception('Non connecté');
+
+      // Récupérer les infos user depuis Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+
+      if (!userDoc.exists) throw Exception('Utilisateur introuvable');
+
+      final userData = userDoc.data()!;
       
       await _reservationService.createReservation(
-        userId: user['email'],
-        userEmail: user['email'],
-        userName: '${user['prenom']} ${user['nom']}',
+        userId: firebaseUser.uid,
+        userEmail: userData['email'],
+        userName: '${userData['prenom']} ${userData['nom']}',
         userPhone: _phoneController.text.trim(),
         stageId: widget.stage.id,
         stageName: widget.stage.nom,
