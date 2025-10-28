@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../services/firebase_stage_service.dart';
-import '../../models/stage.dart';
 import '../custom_text_field.dart';
 
 class VoucherFormDialog extends StatefulWidget {
@@ -12,32 +10,18 @@ class _VoucherFormDialogState extends State<VoucherFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   final _heuresController = TextEditingController();
-  final _clientController = TextEditingController();
-  final _notesController = TextEditingController();
   
-  String? _selectedStage;
-  DateTime? _dateExpiration;
-  List<Stage> _stages = [];
-  bool _isLoadingStages = true;
+  DateTime _dateExpiration = DateTime.now().add(Duration(days: 365)); // 1 an par défaut
 
   @override
   void initState() {
     super.initState();
-    _loadStages();
     _generateCode();
-  }
-
-  Future<void> _loadStages() async {
-    final stages = await FirebaseStageService().getAllStages();
-    setState(() {
-      _stages = stages;
-      _isLoadingStages = false;
-    });
   }
 
   void _generateCode() {
     final random = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
-    _codeController.text = 'VCH$random';
+    _codeController.text = 'KITE$random';
   }
 
   @override
@@ -57,6 +41,7 @@ class _VoucherFormDialogState extends State<VoucherFormDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Code voucher
               Row(
                 children: [
                   Expanded(
@@ -64,94 +49,94 @@ class _VoucherFormDialogState extends State<VoucherFormDialog> {
                       controller: _codeController,
                       label: 'Code voucher *',
                       icon: Icons.qr_code,
-                      validator: (v) => v == null || v.isEmpty ? 'Requis' : null,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Code requis';
+                        if (v.length < 4) return 'Min 4 caractères';
+                        return null;
+                      },
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.refresh),
+                    icon: Icon(Icons.refresh, color: Colors.purple),
                     onPressed: _generateCode,
-                    tooltip: 'Générer un code',
+                    tooltip: 'Générer un nouveau code',
                   ),
                 ],
               ),
-              SizedBox(height: 12),
+              
+              SizedBox(height: 16),
+              
+              // Nombre d'heures
               CustomTextField(
                 controller: _heuresController,
                 label: 'Nombre d\'heures *',
                 icon: Icons.access_time,
                 keyboardType: TextInputType.number,
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Requis';
-                  if (int.tryParse(v) == null || int.parse(v) <= 0) {
-                    return 'Nombre invalide';
+                  if (v == null || v.isEmpty) return 'Heures requises';
+                  final heures = int.tryParse(v);
+                  if (heures == null || heures <= 0) {
+                    return 'Nombre invalide (min: 1)';
+                  }
+                  if (heures > 100) {
+                    return 'Maximum 100 heures';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 12),
-              _isLoadingStages
-                  ? CircularProgressIndicator()
-                  : DropdownButtonFormField<String>(
-                      value: _selectedStage,
-                      decoration: InputDecoration(
-                        labelText: 'Stage autorisé',
-                        prefixIcon: Icon(Icons.water_drop),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                      hint: Text('Tous les stages'),
-                      items: [
-                        DropdownMenuItem(
-                          value: null,
-                          child: Text('Tous les stages'),
-                        ),
-                        ..._stages.map((stage) {
-                          return DropdownMenuItem(
-                            value: stage.id,
-                            child: Text(stage.nom),
-                          );
-                        }).toList(),
-                      ],
-                      onChanged: (value) {
-                        setState(() => _selectedStage = value);
-                      },
-                    ),
-              SizedBox(height: 12),
-              CustomTextField(
-                controller: _clientController,
-                label: 'Email client (optionnel)',
-                icon: Icons.person,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              SizedBox(height: 12),
+              
+              SizedBox(height: 16),
+              
+              // Date d'expiration
               InkWell(
                 onTap: _pickDate,
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Date d\'expiration (optionnel)',
-                    prefixIcon: Icon(Icons.calendar_today),
+                    labelText: 'Date d\'expiration *',
+                    prefixIcon: Icon(Icons.calendar_today, color: Colors.purple),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                   ),
-                  child: Text(
-                    _dateExpiration == null
-                        ? 'Aucune expiration'
-                        : '${_dateExpiration!.day}/${_dateExpiration!.month}/${_dateExpiration!.year}',
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${_dateExpiration.day}/${_dateExpiration.month}/${_dateExpiration.year}',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      Icon(Icons.arrow_drop_down, color: Colors.grey),
+                    ],
                   ),
                 ),
               ),
-              SizedBox(height: 12),
-              CustomTextField(
-                controller: _notesController,
-                label: 'Notes',
-                icon: Icons.notes,
-                maxLines: 2,
+              
+              SizedBox(height: 16),
+              
+              // Info
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: Colors.purple),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Le client pourra utiliser ce voucher lors de ses réservations.',
+                        style: TextStyle(fontSize: 12, color: Colors.purple[900]),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -163,39 +148,65 @@ class _VoucherFormDialogState extends State<VoucherFormDialog> {
           child: Text('Annuler'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              Navigator.pop(context, {
-                'code': _codeController.text.trim(),
-                'heures': int.parse(_heuresController.text),
-                'stageType': _selectedStage,
-                'clientAssigne': _clientController.text.trim().isEmpty
-                    ? null
-                    : _clientController.text.trim(),
-                'dateExpiration': _dateExpiration,
-                'notes': _notesController.text.trim().isEmpty
-                    ? null
-                    : _notesController.text.trim(),
-              });
-            }
-          },
+          onPressed: _handleSubmit,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.purple,
             foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
-          child: Text('Créer'),
+          child: Text('Créer le voucher'),
         ),
       ],
     );
   }
 
+  void _handleSubmit() {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Vérifier que la date d'expiration est dans le futur
+    if (_dateExpiration.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('La date d\'expiration doit être dans le futur'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    print('🔵 FORM: Code = ${_codeController.text.trim()}');
+    print('🔵 FORM: Heures = ${_heuresController.text.trim()}');
+    print('🔵 FORM: Date expiration = $_dateExpiration');
+    print('🔵 FORM: Date expiration type = ${_dateExpiration.runtimeType}');
+
+    Navigator.pop(context, {
+      'code': _codeController.text.trim().toUpperCase(),
+      'heures': int.parse(_heuresController.text.trim()),
+      'dateExpiration': _dateExpiration,
+    });
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().add(Duration(days: 30)),
+      initialDate: _dateExpiration,
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(Duration(days: 365)),
+      lastDate: DateTime.now().add(Duration(days: 1825)), // 5 ans max
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.purple,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
+    
     if (picked != null) {
       setState(() => _dateExpiration = picked);
     }
@@ -205,8 +216,6 @@ class _VoucherFormDialogState extends State<VoucherFormDialog> {
   void dispose() {
     _codeController.dispose();
     _heuresController.dispose();
-    _clientController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 }

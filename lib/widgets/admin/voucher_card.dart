@@ -6,11 +6,15 @@ class VoucherCard extends StatelessWidget {
   final Voucher voucher;
   final VoidCallback onTap;
   final VoidCallback onEdit;
+  final VoidCallback? onToggle;
+  final VoidCallback? onDelete;
 
   VoucherCard({
     required this.voucher,
     required this.onTap,
     required this.onEdit,
+    this.onToggle,
+    this.onDelete,
   });
 
   @override
@@ -32,6 +36,10 @@ class VoucherCard extends StatelessWidget {
               _buildProgressBar(),
               SizedBox(height: 12),
               _buildDetails(),
+              if (onToggle != null || onDelete != null) ...[
+                SizedBox(height: 12),
+                _buildActions(),
+              ],
             ],
           ),
         ),
@@ -76,26 +84,22 @@ class VoucherCard extends StatelessWidget {
     IconData icon;
     String text;
 
-    switch (voucher.statut) {
-      case 'actif':
-        color = Colors.green;
-        icon = Icons.check_circle;
-        text = 'Actif';
-        break;
-      case 'utilise':
-        color = Colors.grey;
-        icon = Icons.block;
-        text = 'Utilisé';
-        break;
-      case 'expire':
-        color = Colors.red;
-        icon = Icons.cancel;
-        text = 'Expiré';
-        break;
-      default:
-        color = Colors.grey;
-        icon = Icons.help;
-        text = 'Inconnu';
+    if (!voucher.actif) {
+      color = Colors.grey;
+      icon = Icons.block;
+      text = 'Inactif';
+    } else if (voucher.isExpired) {
+      color = Colors.red;
+      icon = Icons.cancel;
+      text = 'Expiré';
+    } else if (voucher.isExhausted) {
+      color = Colors.orange;
+      icon = Icons.warning;
+      text = 'Épuisé';
+    } else {
+      color = Colors.green;
+      icon = Icons.check_circle;
+      text = 'Actif';
     }
 
     return Container(
@@ -123,6 +127,10 @@ class VoucherCard extends StatelessWidget {
   }
 
   Widget _buildProgressBar() {
+    final progress = voucher.heuresTotales > 0
+        ? voucher.heuresRestantes / voucher.heuresTotales
+        : 0.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -134,7 +142,7 @@ class VoucherCard extends StatelessWidget {
               style: TextStyle(fontSize: 13, color: Colors.grey[600]),
             ),
             Text(
-              '${voucher.heuresRestantes}h / ${voucher.heuresInitiales}h',
+              '${voucher.heuresRestantes}h / ${voucher.heuresTotales}h',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -147,7 +155,7 @@ class VoucherCard extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value: voucher.heuresRestantes / voucher.heuresInitiales,
+            value: progress,
             backgroundColor: Colors.grey[200],
             valueColor: AlwaysStoppedAnimation<Color>(
               voucher.heuresRestantes > 0 ? Colors.purple : Colors.grey,
@@ -164,22 +172,20 @@ class VoucherCard extends StatelessWidget {
       spacing: 12,
       runSpacing: 8,
       children: [
-        if (voucher.clientAssigne != null)
-          _buildChip(Icons.person, voucher.clientAssigne!, Colors.blue),
-        if (voucher.stageType != null)
-          _buildChip(Icons.water_drop, 'Stage spécifique', Colors.orange),
-        if (voucher.dateExpiration != null)
-          _buildChip(
-            Icons.calendar_today,
-            'Exp: ${DateFormat('dd/MM/yy').format(voucher.dateExpiration!)}',
-            voucher.dateExpiration!.isBefore(DateTime.now())
-                ? Colors.red
-                : Colors.grey,
-          ),
-        if (voucher.historique.isNotEmpty)
+        _buildChip(
+          Icons.calendar_today,
+          'Exp: ${DateFormat('dd/MM/yyyy').format(voucher.dateExpiration)}',
+          voucher.isExpired ? Colors.red : Colors.grey,
+        ),
+        _buildChip(
+          Icons.access_time,
+          'Créé: ${DateFormat('dd/MM/yyyy').format(voucher.createdAt)}',
+          Colors.blue,
+        ),
+        if (voucher.heuresRestantes != voucher.heuresTotales)
           _buildChip(
             Icons.history,
-            '${voucher.historique.length} utilisation${voucher.historique.length > 1 ? 's' : ''}',
+            '${voucher.heuresTotales - voucher.heuresRestantes}h utilisées',
             Colors.purple,
           ),
       ],
@@ -206,6 +212,35 @@ class VoucherCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (onToggle != null)
+          TextButton.icon(
+            onPressed: onToggle,
+            icon: Icon(
+              voucher.actif ? Icons.toggle_on : Icons.toggle_off,
+              size: 20,
+            ),
+            label: Text(voucher.actif ? 'Désactiver' : 'Activer'),
+            style: TextButton.styleFrom(
+              foregroundColor: voucher.actif ? Colors.orange : Colors.green,
+            ),
+          ),
+        if (onDelete != null) ...[
+          SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: onDelete,
+            icon: Icon(Icons.delete_outline, size: 20),
+            label: Text('Supprimer'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ],
+      ],
     );
   }
 }

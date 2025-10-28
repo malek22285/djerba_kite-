@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../models/stage.dart';
-//import '../../services/reservation_service.dart';
-import '../../services/firebase_reservation_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/stage.dart';
+import '../../models/voucher.dart';
+import '../../services/firebase_reservation_service.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/date_time_picker.dart';
-import '../../widgets/voucher_section.dart';
 import '../../widgets/reservation_button.dart';
 import '../../widgets/stage_info_card.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../widgets/voucher_validation_widget.dart';
 
 class ReservationScreen extends StatefulWidget {
   final Stage stage;
@@ -21,14 +21,14 @@ class ReservationScreen extends StatefulWidget {
 
 class _ReservationScreenState extends State<ReservationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final FirebaseReservationService _reservationService = FirebaseReservationService();
-  
+  final _reservationService = FirebaseReservationService();
+  final _phoneController = TextEditingController();
+  final _voucherController = TextEditingController();
+
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String _selectedNiveau = 'Débutant';
-  final _phoneController = TextEditingController();
-  final _voucherController = TextEditingController();
-  bool _hasVoucher = false;
+  Voucher? _validatedVoucher;
   bool _isLoading = false;
 
   final List<String> _niveaux = [
@@ -131,19 +131,21 @@ class _ReservationScreenState extends State<ReservationScreen> {
               ),
               SizedBox(height: 24),
               
-              VoucherSection(
-                hasVoucher: _hasVoucher,
-                onChanged: (value) => setState(() => _hasVoucher = value!),
-                controller: _voucherController,
-                validator: _hasVoucher
-                    ? (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Code voucher requis';
-                        }
-                        return null;
-                      }
-                    : null,
-              ),
+             VoucherValidationWidget(
+  stage: widget.stage,
+  controller: _voucherController,
+  onVoucherValidated: (voucher) {
+    print('🔵 SCREEN: Callback reçu');
+    print('🔵 SCREEN: voucher id = ${voucher?.id}');
+    print('🔵 SCREEN: voucher code = ${voucher?.code}');
+    
+    setState(() {
+      _validatedVoucher = voucher;
+    });
+    
+    print('🔵 SCREEN: _validatedVoucher maintenant = ${_validatedVoucher?.id}');
+  },
+),
               SizedBox(height: 32),
               
               ReservationButton(
@@ -194,95 +196,113 @@ class _ReservationScreenState extends State<ReservationScreen> {
     
     if (picked != null) setState(() => _selectedTime = picked);
   }
+Future<void> _handleSubmit() async {
+  print('🔵 CLIENT: _handleSubmit appelé');
+  
+  if (_selectedDate == null || _selectedTime == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Veuillez sélectionner une date et une heure'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
 
-  void _handleSubmit() async {
-    if (_selectedDate == null || _selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veuillez sélectionner une date et une heure'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+  if (!_formKey.currentState!.validate()) return;
 
-    if (!_formKey.currentState!.validate()) return;
+  // ↓ AJOUTE LA VALIDATION DU VOUCHER ICI
+  if (_voucherController.text.trim().isNotEmpty && _validatedVoucher == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('⚠️ Veuillez valider le code voucher avant de continuer'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+      ),
+    );
+    return;
+  }
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final firebaseUser = FirebaseAuth.instance.currentUser;
-      if (firebaseUser == null) throw Exception('Non connecté');
+  try {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) throw Exception('Non connecté');
 
-      // Récupérer les infos user depuis Firestore
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get();
 
-      if (!userDoc.exists) throw Exception('Utilisateur introuvable');
+    if (!userDoc.exists) throw Exception('Utilisateur introuvable');
 
-      final userData = userDoc.data()!;
-      
-      await _reservationService.createReservation(
-        userId: firebaseUser.uid,
-        userEmail: userData['email'],
-        userName: '${userData['prenom']} ${userData['nom']}',
-        userPhone: _phoneController.text.trim(),
-        stageId: widget.stage.id,
-        stageName: widget.stage.nom,
-        dateDemande: _selectedDate!,
-        heureDemande: _selectedTime!.format(context),
-        niveauClient: _selectedNiveau,
-        prixFinal: widget.stage.getPrixFinal(),
-        voucherCode: _hasVoucher ? _voucherController.text.trim() : null,
-      );
+    final userData = userDoc.data()!;
+    
+    print('🔵 CLIENT: _validatedVoucher = $_validatedVoucher');
+    print('🔵 CLIENT: voucher id = ${_validatedVoucher?.id}');
+    print('🔵 CLIENT: voucher code = ${_validatedVoucher?.code}');
+    
+    await _reservationService.createReservation(
+      userId: firebaseUser.uid,
+      userEmail: userData['email'],
+      userName: '${userData['prenom']} ${userData['nom']}',
+      userPhone: _phoneController.text.trim(),
+      stageId: widget.stage.id,
+      stageName: widget.stage.nom,
+      stageDuree: widget.stage.duree,
+      dateDemande: _selectedDate!,
+      heureDemande: _selectedTime!.format(context),
+      niveauClient: _selectedNiveau,
+      prixFinal: widget.stage.getPrixFinal(),
+      voucherId: _validatedVoucher?.id,
+      voucherCode: _validatedVoucher?.code,
+    );
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 28),
-              SizedBox(width: 12),
-              Text('Demande envoyée'),
-            ],
-          ),
-          content: Text(
-            'Votre demande de réservation a été envoyée avec succès.\n\n'
-            'Vous recevrez une notification WhatsApp dès validation par notre équipe.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Color(0xFF2a5298),
-              ),
-              child: Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            SizedBox(width: 12),
+            Text('Demande envoyée'),
           ],
         ),
-      );
-    } catch (e) {
-      setState(() => _isLoading = false);
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Colors.red,
+        content: Text(
+          'Votre demande de réservation a été envoyée avec succès.\n\n'
+          'Vous recevrez une notification WhatsApp dès validation par notre équipe.',
         ),
-      );
-    }
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Color(0xFF2a5298),
+            ),
+            child: Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    setState(() => _isLoading = false);
+    
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erreur: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   @override
   void dispose() {

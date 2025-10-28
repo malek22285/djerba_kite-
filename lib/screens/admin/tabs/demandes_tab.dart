@@ -13,13 +13,13 @@ class DemandesTab extends StatefulWidget {
 
 class _DemandesTabState extends State<DemandesTab> {
  final FirebaseReservationService _reservationService = FirebaseReservationService();
-  List<Reservation> _demandes = [];
+
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadDemandes();
+    
   }
 
   Future<void> _loadDemandes() async {
@@ -28,7 +28,7 @@ class _DemandesTabState extends State<DemandesTab> {
     try {
       final demandes = await _reservationService.getPendingReservations();
       setState(() {
-        _demandes = demandes;
+        
         _isLoading = false;
       });
     } catch (e) {
@@ -37,31 +37,67 @@ class _DemandesTabState extends State<DemandesTab> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return _isLoading
-        ? Center(child: CircularProgressIndicator())
-        : RefreshIndicator(
-            onRefresh: _loadDemandes,
-            child: _demandes.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: EdgeInsets.all(16),
-                    itemCount: _demandes.length,
-                    itemBuilder: (context, index) {
-                      final demande = _demandes[index];
-                      final isOld = DateTime.now().difference(demande.createdAt).inHours > 24;
-                      
-                      return DemandeCard(
-                        demande: demande,
-                        isOld: isOld,
-                        onAccept: () => _handleAccept(demande),
-                        onPropose: () => _handlePropose(demande),
-                        onReject: () => _handleReject(demande),
-                      );
-                    },
-                  ),
-          );
-  }
+  @override
+Widget build(BuildContext context) {
+  return StreamBuilder<List<Reservation>>(
+    stream: _reservationService.getPendingReservations(),
+    builder: (context, snapshot) {
+      // État de chargement
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Center(child: CircularProgressIndicator());
+      }
+
+      // Erreur
+      if (snapshot.hasError) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Erreur: ${snapshot.error}',
+                style: TextStyle(color: Colors.red),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Récupérer les demandes
+      final demandes = snapshot.data ?? [];
+
+      // Aucune demande
+      if (demandes.isEmpty) {
+        return _buildEmptyState();
+      }
+
+      // Afficher les demandes
+      return RefreshIndicator(
+        onRefresh: () async {
+          // Le stream se rafraîchit automatiquement
+          await Future.delayed(Duration(milliseconds: 500));
+        },
+        child: ListView.builder(
+          padding: EdgeInsets.all(16),
+          itemCount: demandes.length,
+          itemBuilder: (context, index) {
+            final demande = demandes[index];
+            final isOld = DateTime.now().difference(demande.createdAt).inHours > 24;
+            
+            return DemandeCard(
+              demande: demande,
+              isOld: isOld,
+              onAccept: () => _handleAccept(demande),
+              onPropose: () => _handlePropose(demande),
+              onReject: () => _handleReject(demande),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildEmptyState() {
     return ListView(
@@ -93,12 +129,12 @@ class _DemandesTabState extends State<DemandesTab> {
     if (result == null) return;
 
     try {
-      await _reservationService.confirmReservation(
-        reservationId: demande.id,
-        dateConfirmee: result['date'],
-        heureConfirmee: result['time'].format(context),
-        remiseIndividuelle: result['remise'],
-      );
+   await _reservationService.confirmReservation(
+  demande.id,
+  result['date'],
+  result['time'].format(context),
+  remiseIndividuelle: result['remise'] ?? 0,
+);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -107,7 +143,7 @@ class _DemandesTabState extends State<DemandesTab> {
         ),
       );
 
-      _loadDemandes();
+      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
@@ -120,13 +156,12 @@ class _DemandesTabState extends State<DemandesTab> {
     if (result == null) return;
 
     try {
-      await _reservationService.proposeAlternative(
-        reservationId: demande.id,
-        dateProposee: result['date'],
-        heureProposee: result['time'].format(context),
-        motif: result['motif'],
-        remiseIndividuelle: result['remise'],
-      );
+    await _reservationService.proposeAlternative(
+  demande.id,
+  result['date'],
+  result['time'].format(context),
+  result['motif'],
+);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -135,7 +170,7 @@ class _DemandesTabState extends State<DemandesTab> {
         ),
       );
 
-      _loadDemandes();
+     
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
@@ -149,8 +184,7 @@ class _DemandesTabState extends State<DemandesTab> {
 
     try {
       await _reservationService.rejectReservation(
-        reservationId: demande.id,
-        motif: motif,
+        demande.id, motif,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(

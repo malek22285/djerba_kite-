@@ -164,8 +164,11 @@ class ReservationCard extends StatelessWidget {
   }
 
 bool _shouldShowActions() {
-  // Si en attente → bouton Annuler
-  if (reservation.isEnAttente) return true;
+  // Si en attente sans proposition → bouton Annuler
+  if (reservation.isEnAttente && reservation.dateConfirmee == null) return true;
+  
+  // Si en attente AVEC proposition → boutons Accepter ET Refuser
+  if (reservation.isEnAttente && reservation.dateConfirmee != null) return true;
   
   // Si refusée AVEC proposition → boutons Accepter ET Refuser
   if (reservation.isRefusee && reservation.dateConfirmee != null) return true;
@@ -173,8 +176,9 @@ bool _shouldShowActions() {
   return false;
 }
 
- Widget _buildActions(BuildContext context) {
-  if (reservation.isEnAttente) {
+Widget _buildActions(BuildContext context) {
+  // CAS 1: En attente SANS proposition → Annuler seulement
+  if (reservation.isEnAttente && reservation.dateConfirmee == null) {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
@@ -192,32 +196,75 @@ bool _shouldShowActions() {
     );
   }
 
-  if (reservation.isRefusee && reservation.dateConfirmee != null) {
-    // Proposition alternative → 2 boutons
-    return Row(
+  // CAS 2: En attente AVEC proposition OU Refusée avec proposition → 2 boutons
+  if ((reservation.isEnAttente || reservation.isRefusee) && 
+      reservation.dateConfirmee != null) {
+    return Column(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onCancel, // Utilise onCancel pour refuser définitivement
-            icon: Icon(Icons.close, size: 18),
-            label: Text('Refuser'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: BorderSide(color: Colors.red),
-            ),
+        // Afficher la proposition
+        Container(
+          padding: EdgeInsets.all(12),
+          margin: EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.event_available, color: Colors.green[700], size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Proposition de l\'admin',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[900],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Date: ${DateFormat('dd/MM/yyyy').format(reservation.dateConfirmee!)}',
+                style: TextStyle(color: Colors.green[900]),
+              ),
+              Text(
+                'Heure: ${reservation.heureConfirmee}',
+                style: TextStyle(color: Colors.green[900]),
+              ),
+            ],
           ),
         ),
-        SizedBox(width: 8),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: onAcceptProposal,
-            icon: Icon(Icons.check, size: 18),
-            label: Text('Accepter'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+        // Boutons Accepter / Refuser
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onCancel,
+                icon: Icon(Icons.close, size: 18),
+                label: Text('Refuser'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: BorderSide(color: Colors.red),
+                ),
+              ),
             ),
-          ),
+            SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onAcceptProposal,
+                icon: Icon(Icons.check, size: 18),
+                label: Text('Accepter'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

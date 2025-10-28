@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-//import '../../../services/reservation_service.dart';
 import '../../../services/firebase_reservation_service.dart';
 import '../../../widgets/admin/stat_card.dart';
 import '../../../widgets/admin/stage_repartition_card.dart';
@@ -11,7 +10,8 @@ class StatsTab extends StatefulWidget {
 }
 
 class _StatsTabState extends State<StatsTab> {
-  final _reservationService = ReservationService();
+  // 1. Initialisation du service (corrigée)
+  final _reservationService = FirebaseReservationService();
   
   DateTime _selectedMonth = DateTime.now();
   Map<String, dynamic>? _stats;
@@ -20,21 +20,33 @@ class _StatsTabState extends State<StatsTab> {
   @override
   void initState() {
     super.initState();
+    // Assurer que la locale 'fr_FR' est disponible
+    Intl.defaultLocale = 'fr_FR'; 
     _loadStats();
   }
 
   Future<void> _loadStats() async {
     setState(() => _isLoading = true);
     
-    final stats = await _reservationService.getStatsForMonth(
-      year: _selectedMonth.year,
-      month: _selectedMonth.month,
-    );
-    
-    setState(() {
-      _stats = stats;
-      _isLoading = false;
-    });
+    // 2. Appel de la méthode avec les deux arguments requis (corrigé)
+    try {
+      final stats = await _reservationService.getStatsForMonth(
+        _selectedMonth.year,
+        _selectedMonth.month,
+      );
+      
+      setState(() {
+        _stats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Erreur lors du chargement des stats: $e');
+      setState(() {
+        _isLoading = false;
+        _stats = {}; // Initialise à une map vide en cas d'erreur
+      });
+      // Optionnel: Afficher un SnackBar ou un dialogue d'erreur
+    }
   }
 
   @override
@@ -75,7 +87,7 @@ class _StatsTabState extends State<StatsTab> {
           ),
           Expanded(
             child: Text(
-              DateFormat('MMMM yyyy', 'fr_FR').format(_selectedMonth),
+              DateFormat('MMMM yyyy').format(_selectedMonth), // 'fr_FR' n'est pas nécessaire si Intl.defaultLocale est défini
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
@@ -90,7 +102,20 @@ class _StatsTabState extends State<StatsTab> {
   }
 
   Widget _buildContent() {
-    if (_stats == null) return SizedBox.shrink();
+    if (_stats == null || _stats!.isEmpty) {
+      return Center(
+        child: Text('Aucune donnée statistique disponible pour ce mois.'),
+      );
+    }
+
+    // Sécurisation des valeurs pour éviter le NoSuchMethodError (le crash)
+    final totalReservations = _stats!['totalReservations'] ?? 0;
+    final chiffreAffaires = _stats!['chiffreAffaires'] ?? 0.0;
+    final vouchersUtilises = _stats!['vouchersUtilises'] ?? 0;
+    final repartitionStages = Map<String, int>.from(_stats!['repartitionStages'] ?? {});
+    
+    // Calcul sécurisé du revenu moyen
+    final revenuMoyen = totalReservations > 0 ? (chiffreAffaires / totalReservations) : 0.0;
 
     return ListView(
       padding: EdgeInsets.all(16),
@@ -106,27 +131,27 @@ class _StatsTabState extends State<StatsTab> {
           children: [
             StatCard(
               title: 'Réservations',
-              value: '${_stats!['totalReservations']}',
+              value: '$totalReservations',
               icon: Icons.check_circle,
               color: Colors.green,
             ),
             StatCard(
               title: 'Chiffre d\'affaires',
-              value: '${_stats!['chiffreAffaires'].toStringAsFixed(0)} TND',
+              // 3. Utilisation sécurisée de toStringAsFixed(0)
+              value: '${chiffreAffaires.toStringAsFixed(0)} TND', 
               icon: Icons.payments,
               color: Color(0xFF2a5298),
             ),
             StatCard(
               title: 'Vouchers utilisés',
-              value: '${_stats!['vouchersUtilises']}',
+              value: '$vouchersUtilises',
               icon: Icons.confirmation_number,
               color: Colors.purple,
             ),
             StatCard(
               title: 'Revenu moyen',
-              value: _stats!['totalReservations'] > 0
-                  ? '${(_stats!['chiffreAffaires'] / _stats!['totalReservations']).toStringAsFixed(0)} TND'
-                  : '0 TND',
+              // 3. Utilisation sécurisée du revenu moyen calculé
+              value: '${revenuMoyen.toStringAsFixed(0)} TND',
               icon: Icons.trending_up,
               color: Colors.orange,
             ),
@@ -137,7 +162,7 @@ class _StatsTabState extends State<StatsTab> {
         
         // Répartition par stage
         StageRepartitionCard(
-          repartition: Map<String, int>.from(_stats!['repartitionStages']),
+          repartition: repartitionStages,
         ),
       ],
     );

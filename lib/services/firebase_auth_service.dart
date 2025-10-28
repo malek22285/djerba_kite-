@@ -5,7 +5,8 @@ class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // INSCRIPTION
+// INSCRIPTION
+// INSCRIPTION
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -14,8 +15,30 @@ class FirebaseAuthService {
     required String telephone,
   }) async {
     try {
-      // 1. Créer dans Firestore d'abord
-      String uid = DateTime.now().millisecondsSinceEpoch.toString();
+      print('🔵 REGISTER: Inscription $email...');
+      
+      // 1. Créer dans Firebase Auth D'ABORD
+      User? firebaseUser;
+      try {
+        final userCredential = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        firebaseUser = userCredential.user;
+        print('✅ REGISTER: Compte Auth créé');
+      } catch (e) {
+        print('⚠️ Auth: Erreur (bug Pigeon): $e');
+        // Récupérer l'user malgré l'erreur Pigeon
+        await Future.delayed(Duration(milliseconds: 500));
+        firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          throw Exception('Erreur création compte Auth');
+        }
+      }
+
+      // 2. Utiliser l'UID de Firebase Auth pour Firestore
+      final uid = firebaseUser!.uid;
+      print('🔵 REGISTER: UID Firebase = $uid');
       
       Map<String, dynamic> userData = {
         'email': email,
@@ -26,21 +49,13 @@ class FirebaseAuthService {
         'created_at': FieldValue.serverTimestamp(),
       };
 
+      // 3. Créer le document Firestore avec le BON UID
       await _firestore.collection('users').doc(uid).set(userData);
-
-      // 2. Créer dans Auth (ignorer les erreurs de type cast)
-      try {
-        await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      } catch (e) {
-        // Ignorer erreurs PigeonUserDetails
-        print('⚠️ Erreur Auth ignorée (bug connu): $e');
-      }
+      print('✅ REGISTER: Document Firestore créé avec UID $uid');
 
       return {'uid': uid, ...userData};
     } catch (e) {
+      print('❌ REGISTER ERROR: $e');
       throw Exception('Erreur inscription: $e');
     }
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class ReservationButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final Future<void> Function()? onPressed;  // ← CHANGÉ ICI
   final bool isLoading;
 
   ReservationButton({
@@ -17,7 +17,11 @@ class ReservationButton extends StatelessWidget {
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: isLoading || onPressed == null
+            ? null
+            : () async {
+                await onPressed!();
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: Color(0xFF2a5298),
           disabledBackgroundColor: Colors.grey[400],
@@ -40,7 +44,7 @@ class ReservationButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Colors.white,  // ← CHANGÉ EN BLANC
                 ),
               ),
       ),

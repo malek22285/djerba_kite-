@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../services/local_auth_service.dart';
-//import '../../services/reservation_service.dart';
 import '../../services/firebase_reservation_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/reservation.dart';
@@ -12,71 +10,86 @@ class MyReservationsScreen extends StatefulWidget {
 }
 
 class _MyReservationsScreenState extends State<MyReservationsScreen> {
-  final _authService = LocalAuthService();
   final FirebaseReservationService _reservationService = FirebaseReservationService();
-  
-  List<Reservation> _reservations = [];
-  bool _isLoading = true;
-
-  @override
-void initState() {
-  super.initState();
-  // Attendre que le widget soit monté avant de charger
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _loadReservations();
-  });
-}
-
-  Future<void> _loadReservations() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      final user = _authService.getCurrentUser();
-      final reservations = await _reservationService.getUserReservations(user!['email']);
-      
-      setState(() {
-        _reservations = reservations;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur de chargement')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    print('🔵 MY RESERVATIONS: Current user UID = ${firebaseUser?.uid}');
+    
+    if (firebaseUser == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Mes réservations'),
+          backgroundColor: Color(0xFF2a5298),
+        ),
+        body: Center(child: Text('Non connecté')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Mes réservations'),
         backgroundColor: Color(0xFF2a5298),
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadReservations,
-              child: _reservations.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: EdgeInsets.all(16),
-                      itemCount: _reservations.length,
-                      itemBuilder: (context, index) {
-                        return ReservationCard(
-                        reservation: _reservations[index],
-                        onCancel: (_reservations[index].isEnAttente || 
-                        (_reservations[index].isRefusee && _reservations[index].dateConfirmee != null))
-                        ? () => _handleCancel(_reservations[index])
-                        : null,
-                       onAcceptProposal: (_reservations[index].isRefusee && 
-                       _reservations[index].dateConfirmee != null)
-                       ? () => _handleAcceptProposal(_reservations[index])
-                       : null,
-                       );
-                      },
-                    ),
+      body: StreamBuilder<List<Reservation>>(
+        stream: _reservationService.getMyReservations(firebaseUser.uid),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text('Erreur de chargement'),
+                ],
+              ),
+            );
+          }
+
+          final reservations = snapshot.data ?? [];
+
+          if (reservations.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await Future.delayed(Duration(milliseconds: 500));
+            },
+            child: ListView.builder(
+              padding: EdgeInsets.all(16),
+              itemCount: reservations.length,
+              itemBuilder: (context, index) {
+                final reservation = reservations[index];
+                  // AJOUTE CES PRINTS
+  print('🔵 RESERVATION ${reservation.id}:');
+  print('   - Statut: ${reservation.statut}');
+  print('   - isEnAttente: ${reservation.isEnAttente}');
+  print('   - dateConfirmee: ${reservation.dateConfirmee}');
+  print('   - heureConfirmee: ${reservation.heureConfirmee}');
+  print('   - Show Accept Button: ${reservation.isEnAttente && reservation.dateConfirmee != null && reservation.heureConfirmee != null}');
+                return ReservationCard(
+  reservation: reservation,
+  onCancel: reservation.isEnAttente
+      ? () => _handleCancel(reservation)
+      : null,
+  onAcceptProposal: (reservation.isEnAttente && 
+      reservation.dateConfirmee != null && 
+      reservation.heureConfirmee != null)
+      ? () => _handleAcceptProposal(reservation)
+      : null,
+);
+              },
             ),
+          );
+        },
+      ),
     );
   }
 
@@ -104,165 +117,161 @@ void initState() {
       ),
     );
   }
-void _handleCancel(Reservation reservation) async {
-  String title = reservation.isEnAttente 
-      ? 'Annuler la réservation ?' 
-      : 'Refuser la proposition ?';
-  
-  String content = reservation.isEnAttente
-      ? 'Êtes-vous sûr de vouloir annuler cette demande ?'
-      : 'Êtes-vous sûr de refuser la proposition de l\'admin ?';
 
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(title),
-      content: Text(content),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text('Non'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: Text('Oui, refuser'),
-        ),
-      ],
-    ),
-  );
-
-  if (confirm != true) return;
-
-  try {
-    await _reservationService.cancelReservation(reservation.id);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(reservation.isEnAttente 
-            ? 'Réservation annulée' 
-            : 'Proposition refusée'),
-        backgroundColor: Colors.green,
+  void _handleCancel(Reservation reservation) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(reservation.isEnAttente 
+            ? 'Annuler la réservation ?' 
+            : 'Refuser la proposition ?'),
+        content: Text(reservation.isEnAttente
+            ? 'Êtes-vous sûr de vouloir annuler cette demande ?'
+            : 'Êtes-vous sûr de refuser la proposition de l\'admin ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Non'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Oui, refuser'),
+          ),
+        ],
       ),
     );
-    
-    _loadReservations();
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erreur: ${e.toString()}'),
-        backgroundColor: Colors.red,
-      ),
-    );
+
+    if (confirm != true) return;
+
+    try {
+      await _reservationService.cancelReservation(reservation.id);
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(reservation.isEnAttente 
+              ? 'Réservation annulée' 
+              : 'Proposition refusée'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
-}
 
   void _handleAcceptProposal(Reservation reservation) async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Row(
-        children: [
-          Icon(Icons.check_circle, color: Colors.green),
-          SizedBox(width: 8),
-          Text('Accepter la proposition ?'),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Vous allez confirmer la réservation pour:',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          SizedBox(height: 12),
-          _buildProposalInfo(reservation), // ← Widget pour afficher les détails
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text('Annuler'),
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Expanded(child: Text('Accepter la proposition ?')),
+          ],
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-          ),
-          child: Text('Accepter'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vous allez confirmer la réservation pour:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            _buildProposalInfo(reservation),
+          ],
         ),
-      ],
-    ),
-  );
-
-  if (confirm != true) return;
-
-  try {
-    await _reservationService.acceptProposal(reservation.id);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✓ Réservation confirmée'),
-        backgroundColor: Colors.green,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Accepter'),
+          ),
+        ],
       ),
     );
-    
-    _loadReservations();
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erreur: ${e.toString()}'),
-        backgroundColor: Colors.red,
+
+    if (confirm != true) return;
+
+    try {
+      await _reservationService.acceptProposal(reservation.id);
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✓ Réservation confirmée'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildProposalInfo(Reservation reservation) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoRow('📅', 'Date', 
+            '${reservation.dateConfirmee!.day}/${reservation.dateConfirmee!.month}/${reservation.dateConfirmee!.year}'),
+          SizedBox(height: 6),
+          _buildInfoRow('🕒', 'Heure', reservation.heureConfirmee!),
+          SizedBox(height: 6),
+          _buildInfoRow('🪁', 'Stage', reservation.stageName),
+          SizedBox(height: 6),
+          _buildInfoRow('💰', 'Prix', '${reservation.prixFinal.toStringAsFixed(0)} TND'),
+        ],
       ),
     );
   }
-}
 
-// Ajoute ce widget helper dans la même classe
-Widget _buildProposalInfo(Reservation reservation) {
-  return Container(
-    padding: EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.green.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.green.withOpacity(0.3)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoRow(String emoji, String label, String value) {
+    return Row(
       children: [
-        _buildInfoRow('📅', 'Date', 
-          '${reservation.dateConfirmee!.day}/${reservation.dateConfirmee!.month}/${reservation.dateConfirmee!.year}'),
-        SizedBox(height: 6),
-        _buildInfoRow('🕒', 'Heure', reservation.heureConfirmee!),
-        SizedBox(height: 6),
-        _buildInfoRow('🪁', 'Stage', reservation.stageName),
-        SizedBox(height: 6),
-        _buildInfoRow('💰', 'Prix', '${reservation.prixFinal.toStringAsFixed(0)} TND'),
-      ],
-    ),
-  );
-}
-
-Widget _buildInfoRow(String emoji, String label, String value) {
-  return Row(
-    children: [
-      Text(emoji, style: TextStyle(fontSize: 16)),
-      SizedBox(width: 8),
-      Text(
-        '$label: ',
-        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-      ),
-      Expanded(
-        child: Text(
-          value,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        Text(emoji, style: TextStyle(fontSize: 16)),
+        SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
-      ),
-    ],
-  );
-}
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    );
+  }
 }

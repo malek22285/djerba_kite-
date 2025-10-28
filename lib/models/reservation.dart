@@ -18,6 +18,7 @@ class Reservation {
   final String? notesAdmin;
   final double remiseIndividuelle;
   final DateTime createdAt;
+  final int stageDuree;
 
   Reservation({
     required this.id,
@@ -39,6 +40,7 @@ class Reservation {
     this.notesAdmin,
     this.remiseIndividuelle = 0,
     required this.createdAt,
+    required this.stageDuree,
   });
 
   bool get isEnAttente => statut == 'en_attente';
@@ -69,6 +71,7 @@ class Reservation {
       notesAdmin: map['notes_admin'],
       remiseIndividuelle: (map['remise_individuelle'] ?? 0).toDouble(),
       createdAt: DateTime.parse(map['created_at']),
+      stageDuree: map['stage_duree'] ?? 3, // défaut 3 heures
     );
   }
 
@@ -92,6 +95,7 @@ class Reservation {
       'notes_admin': notesAdmin,
       'remise_individuelle': remiseIndividuelle,
       'created_at': createdAt.toIso8601String(),
+      'stage_duree': stageDuree,
     };
   }
 }

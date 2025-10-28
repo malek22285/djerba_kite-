@@ -30,8 +30,8 @@ class _PlanningTabState extends State<PlanningTab> {
     setState(() => _isLoading = true);
     
     final reservations = await _reservationService.getConfirmedReservationsForMonth(
-      year: _currentMonth.year,
-      month: _currentMonth.month,
+       _currentMonth.year,
+      _currentMonth.month,
     );
     
     setState(() {

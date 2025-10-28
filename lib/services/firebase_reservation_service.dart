@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/reservation.dart';
+import 'firebase_voucher_service.dart';
 
 class FirebaseReservationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,6 +16,7 @@ class FirebaseReservationService {
     required String userPhone,
     required String stageId,
     required String stageName,
+    required int stageDuree,
     required DateTime dateDemande,
     required String heureDemande,
     required String niveauClient,
@@ -33,6 +35,7 @@ class FirebaseReservationService {
         'user_phone': userPhone,
         'stage_id': stageId,
         'stage_name': stageName,
+        'stage_duree': stageDuree,
         'date_demande': Timestamp.fromDate(dateDemande),
         'heure_demande': heureDemande,
         'date_confirmee': null,
@@ -68,9 +71,9 @@ class FirebaseReservationService {
         .snapshots()
         .map((snapshot) {
       print('✅ RESERVATION: ${snapshot.docs.length} réservations');
+      
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        // Convertir Timestamp vers DateTime
         return Reservation.fromMap({
           ...data,
           'date_demande': (data['date_demande'] as Timestamp).toDate().toIso8601String(),
@@ -176,19 +179,56 @@ class FirebaseReservationService {
   }
 
   // ========================================
-  // ADMIN: Accepter une demande
+  // ADMIN: Accepter une demande (AVEC AUTO-DÉCRÉMENT VOUCHER)
   // ========================================
-  Future<void> acceptReservation(String id, DateTime date, String heure) async {
+  Future<void> confirmReservation(
+    String id,
+    DateTime date,
+    String heure, {
+    double remiseIndividuelle = 0,
+  }) async {
     try {
       print('🔵 RESERVATION: Acceptation $id pour $date à $heure');
       
+      // 1. Récupérer la réservation
+      final reservationDoc = await _firestore.collection(_collection).doc(id).get();
+      
+      if (!reservationDoc.exists) {
+        throw Exception('Réservation introuvable');
+      }
+      
+      final reservationData = reservationDoc.data()!;
+      // AJOUTE CES PRINTS ↓
+print('🔵 DEBUG: reservationData = $reservationData');
+print('🔵 DEBUG: voucher_id = ${reservationData['voucher_id']}');
+print('🔵 DEBUG: voucher_code = ${reservationData['voucher_code']}');
+print('🔵 DEBUG: stage_duree = ${reservationData['stage_duree']}');
+      
+      // 2. Mettre à jour la réservation
       await _firestore.collection(_collection).doc(id).update({
         'statut': 'confirmee',
         'date_confirmee': Timestamp.fromDate(date),
         'heure_confirmee': heure,
+        'remise_individuelle': remiseIndividuelle,
       });
 
       print('✅ RESERVATION: Acceptée');
+
+      // 3. Si voucher utilisé, décrémenter automatiquement
+      if (reservationData['voucher_id'] != null) {
+        final voucherId = reservationData['voucher_id'] as String;
+        final stageDuree = reservationData['stage_duree'] as int? ?? 3;
+        
+        print('🔵 VOUCHER: Décrémenter $voucherId de ${stageDuree}h');
+        
+        try {
+          final voucherService = FirebaseVoucherService();
+          await voucherService.useVoucherHours(voucherId, stageDuree);
+          print('✅ VOUCHER: Décrémenté automatiquement');
+        } catch (e) {
+          print('⚠️ VOUCHER: Erreur décrémention: $e');
+        }
+      }
     } catch (e) {
       print('❌ RESERVATION ERROR: $e');
       throw Exception('Erreur acceptation: $e');
@@ -198,7 +238,7 @@ class FirebaseReservationService {
   // ========================================
   // ADMIN: Proposer une autre date
   // ========================================
-  Future<void> proposeReservation(
+  Future<void> proposeAlternative(
     String id,
     DateTime date,
     String heure,
@@ -211,7 +251,6 @@ class FirebaseReservationService {
         'date_confirmee': Timestamp.fromDate(date),
         'heure_confirmee': heure,
         'notes_admin': notes,
-        // On garde statut en_attente pour que le client puisse accepter/refuser
       });
 
       print('✅ RESERVATION: Proposition envoyée');
@@ -257,18 +296,45 @@ class FirebaseReservationService {
       throw Exception('Erreur annulation: $e');
     }
   }
+
   // ========================================
-  // CLIENT: Accepter une proposition admin
+  // CLIENT: Accepter une proposition admin (AVEC AUTO-DÉCRÉMENT VOUCHER)
   // ========================================
   Future<void> acceptProposal(String reservationId) async {
     try {
       print('🔵 RESERVATION: Acceptation proposition $reservationId');
       
+      // 1. Récupérer la réservation
+      final reservationDoc = await _firestore.collection(_collection).doc(reservationId).get();
+      
+      if (!reservationDoc.exists) {
+        throw Exception('Réservation introuvable');
+      }
+      
+      final reservationData = reservationDoc.data()!;
+      
+      // 2. Mettre à jour le statut
       await _firestore.collection(_collection).doc(reservationId).update({
         'statut': 'confirmee',
       });
 
       print('✅ RESERVATION: Proposition acceptée');
+
+      // 3. Si voucher utilisé, décrémenter automatiquement
+      if (reservationData['voucher_id'] != null) {
+        final voucherId = reservationData['voucher_id'] as String;
+        final stageDuree = reservationData['stage_duree'] as int? ?? 3;
+        
+        print('🔵 VOUCHER: Décrémenter $voucherId de ${stageDuree}h');
+        
+        try {
+          final voucherService = FirebaseVoucherService();
+          await voucherService.useVoucherHours(voucherId, stageDuree);
+          print('✅ VOUCHER: Décrémenté automatiquement');
+        } catch (e) {
+          print('⚠️ VOUCHER: Erreur décrémention: $e');
+        }
+      }
     } catch (e) {
       print('❌ RESERVATION ERROR: $e');
       throw Exception('Erreur acceptation proposition: $e');
@@ -276,11 +342,109 @@ class FirebaseReservationService {
   }
 
   // ========================================
-  // LEGACY: Récupérer réservations par email (déprécié, utiliser getMyReservations)
+  // ADMIN: Réservations confirmées pour un mois (version Future)
+  // ========================================
+  Future<List<Reservation>> getConfirmedReservationsForMonth(int year, int month) async {
+    try {
+      print('🔵 RESERVATION: Récupération confirmées $year-$month');
+      
+      final startDate = DateTime(year, month, 1);
+      final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('date_confirmee', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('date_confirmee', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .where('statut', isEqualTo: 'confirmee')
+          .get();
+
+      print('✅ RESERVATION: ${snapshot.docs.length} confirmées');
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Reservation.fromMap({
+          ...data,
+          'date_demande': (data['date_demande'] as Timestamp).toDate().toIso8601String(),
+          'date_confirmee': data['date_confirmee'] != null 
+              ? (data['date_confirmee'] as Timestamp).toDate().toIso8601String()
+              : null,
+          'created_at': data['created_at'] != null
+              ? (data['created_at'] as Timestamp).toDate().toIso8601String()
+              : DateTime.now().toIso8601String(),
+        }, doc.id);
+      }).toList();
+    } catch (e) {
+      print('❌ RESERVATION ERROR: $e');
+      return [];
+    }
+  }
+
+  // ========================================
+  // ADMIN: Stats pour un mois
+  // ========================================
+  Future<Map<String, dynamic>> getStatsForMonth(int year, int month) async {
+    try {
+      print('🔵 RESERVATION: Stats pour $year-$month');
+      
+      final startDate = DateTime(year, month, 1);
+      final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+
+      final confirmeesSnapshot = await _firestore
+          .collection(_collection)
+          .where('date_confirmee', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('date_confirmee', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .where('statut', isEqualTo: 'confirmee')
+          .get();
+
+      final enAttenteSnapshot = await _firestore
+          .collection(_collection)
+          .where('statut', isEqualTo: 'en_attente')
+          .get();
+
+      double chiffreAffaires = 0;
+      int vouchersUtilises = 0;
+      Map<String, int> repartitionStages = {};
+      
+      for (var doc in confirmeesSnapshot.docs) {
+        final data = doc.data();
+        
+        chiffreAffaires += (data['prix_final'] ?? 0).toDouble();
+        
+        if (data['voucher_code'] != null && data['voucher_code'] != '') {
+          vouchersUtilises++;
+        }
+        
+        final stageName = data['stage_name'] ?? 'Inconnu';
+        repartitionStages[stageName] = (repartitionStages[stageName] ?? 0) + 1;
+      }
+      
+      final stats = {
+        'totalReservations': confirmeesSnapshot.docs.length,
+        'en_attente': enAttenteSnapshot.docs.length,
+        'chiffreAffaires': chiffreAffaires,
+        'vouchersUtilises': vouchersUtilises,
+        'repartitionStages': repartitionStages,
+      };
+      
+      print('✅ STATS: $stats');
+      return stats;
+    } catch (e) {
+      print('❌ STATS ERROR: $e');
+      return {
+        'totalReservations': 0,
+        'chiffreAffaires': 0.0,
+        'vouchersUtilises': 0,
+        'repartitionStages': {},
+      };
+    }
+  }
+
+  // ========================================
+  // LEGACY: Récupérer réservations par email
   // ========================================
   Future<List<Reservation>> getUserReservations(String userEmail) async {
     try {
-      print('⚠️ RESERVATION: getUserReservations est déprécié, utiliser getMyReservations()');
+      print('⚠️ getUserReservations déprécié');
       print('🔵 RESERVATION: Récupération pour email $userEmail');
       
       final snapshot = await _firestore
