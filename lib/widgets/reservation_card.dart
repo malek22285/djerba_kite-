@@ -64,19 +64,24 @@ class ReservationCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoRow(
-          Icons.calendar_today,
-          'Date demandée',
-          DateFormat('dd/MM/yyyy').format(reservation.dateDemande),
-        ),
-        SizedBox(height: 8),
-        _buildInfoRow(
-          Icons.access_time,
-          'Heure demandée',
-          reservation.heureDemande,
-        ),
+        // Afficher date/heure demandée SEULEMENT si pas de proposition
+        if (!reservation.isPropositionEnvoyee) ...[
+          _buildInfoRow(
+            Icons.calendar_today,
+            'Date demandée',
+            DateFormat('dd/MM/yyyy').format(reservation.dateDemande),
+          ),
+          SizedBox(height: 8),
+          _buildInfoRow(
+            Icons.access_time,
+            'Heure demandée',
+            reservation.heureDemande,
+          ),
+        ],
+        
+        // Si confirmée, afficher date confirmée
         if (reservation.isConfirmee && reservation.dateConfirmee != null) ...[
-          Divider(height: 24),
+          if (!reservation.isPropositionEnvoyee) Divider(height: 24),
           _buildInfoRow(
             Icons.check_circle,
             'Date confirmée',
@@ -91,12 +96,76 @@ class ReservationCard extends StatelessWidget {
             color: Colors.green,
           ),
         ],
+        
+        // Si proposition envoyée, afficher la proposition
+        if (reservation.isPropositionEnvoyee && reservation.dateConfirmee != null) ...[
+          Container(
+            padding: EdgeInsets.all(12),
+            margin: EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.event_available, color: Colors.orange[700], size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      '📅 Proposition de l\'admin',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[900],
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: Colors.orange[700]),
+                    SizedBox(width: 8),
+                    Text(
+                      DateFormat('dd/MM/yyyy').format(reservation.dateConfirmee!),
+                      style: TextStyle(
+                        color: Colors.orange[900],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 16, color: Colors.orange[700]),
+                    SizedBox(width: 8),
+                    Text(
+                      reservation.heureConfirmee ?? '',
+                      style: TextStyle(
+                        color: Colors.orange[900],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+        
         SizedBox(height: 8),
         _buildInfoRow(
           Icons.payments,
           'Prix',
           '${reservation.prixFinal.toStringAsFixed(0)} TND',
         ),
+        
         if (reservation.voucherCode != null) ...[
           SizedBox(height: 8),
           _buildInfoRow(
@@ -163,113 +232,74 @@ class ReservationCard extends StatelessWidget {
     );
   }
 
-bool _shouldShowActions() {
-  // Si en attente sans proposition → bouton Annuler
-  if (reservation.isEnAttente && reservation.dateConfirmee == null) return true;
-  
-  // Si en attente AVEC proposition → boutons Accepter ET Refuser
-  if (reservation.isEnAttente && reservation.dateConfirmee != null) return true;
-  
-  // Si refusée AVEC proposition → boutons Accepter ET Refuser
-  if (reservation.isRefusee && reservation.dateConfirmee != null) return true;
-  
-  return false;
-}
-
-Widget _buildActions(BuildContext context) {
-  // CAS 1: En attente SANS proposition → Annuler seulement
-  if (reservation.isEnAttente && reservation.dateConfirmee == null) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onCancel,
-        icon: Icon(Icons.cancel_outlined),
-        label: Text('Annuler la demande'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.red,
-          side: BorderSide(color: Colors.red),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
-    );
+  bool _shouldShowActions() {
+    // En attente sans proposition → Annuler
+    if (reservation.isEnAttente && reservation.dateConfirmee == null) {
+      return onCancel != null;
+    }
+    
+    // Proposition envoyée → Accepter ET Refuser
+    if (reservation.isPropositionEnvoyee) {
+      return onAcceptProposal != null || onCancel != null;
+    }
+    
+    return false;
   }
 
-  // CAS 2: En attente AVEC proposition OU Refusée avec proposition → 2 boutons
-  if ((reservation.isEnAttente || reservation.isRefusee) && 
-      reservation.dateConfirmee != null) {
-    return Column(
-      children: [
-        // Afficher la proposition
-        Container(
-          padding: EdgeInsets.all(12),
-          margin: EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.green[200]!),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.event_available, color: Colors.green[700], size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Proposition de l\'admin',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[900],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Date: ${DateFormat('dd/MM/yyyy').format(reservation.dateConfirmee!)}',
-                style: TextStyle(color: Colors.green[900]),
-              ),
-              Text(
-                'Heure: ${reservation.heureConfirmee}',
-                style: TextStyle(color: Colors.green[900]),
-              ),
-            ],
+  Widget _buildActions(BuildContext context) {
+    // CAS 1: En attente SANS proposition → Annuler seulement
+    if (reservation.isEnAttente && reservation.dateConfirmee == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: onCancel,
+          icon: Icon(Icons.cancel_outlined),
+          label: Text('Annuler la demande'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.red,
+            side: BorderSide(color: Colors.red),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         ),
-        // Boutons Accepter / Refuser
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onCancel,
-                icon: Icon(Icons.close, size: 18),
-                label: Text('Refuser'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: BorderSide(color: Colors.red),
-                ),
-              ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: onAcceptProposal,
-                icon: Icon(Icons.check, size: 18),
-                label: Text('Accepter'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+      );
+    }
 
-  return SizedBox.shrink();
-}
+    // CAS 2: Proposition envoyée → Accepter ET Refuser
+    if (reservation.isPropositionEnvoyee) {
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: onCancel,
+              icon: Icon(Icons.close, size: 18),
+              label: Text('Refuser'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: BorderSide(color: Colors.red),
+                padding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton.icon(
+              onPressed: onAcceptProposal,
+              icon: Icon(Icons.check_circle, size: 18),
+              label: Text('Accepter la proposition'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return SizedBox.shrink();
+  }
 }

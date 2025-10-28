@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/local_auth_service.dart';
 import '../auth/login_screen.dart';
 import 'tabs/demandes_tab.dart';
+import 'tabs/propositions_tab.dart';
 import 'tabs/planning_tab.dart';
 import 'tabs/stages_tab.dart';
 import 'tabs/vouchers_tab.dart';
@@ -18,6 +19,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   final List<Widget> _tabs = [
     DemandesTab(),
+    PropositionsTab(),  // ← AJOUTÉ
     PlanningTab(),
     StagesTab(),
     VouchersTab(),
@@ -53,6 +55,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications_active),
             label: 'Demandes',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.schedule_send),  // ← AJOUTÉ
+            label: 'Propositions',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),

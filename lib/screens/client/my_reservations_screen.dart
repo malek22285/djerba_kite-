@@ -67,24 +67,25 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
               itemCount: reservations.length,
               itemBuilder: (context, index) {
                 final reservation = reservations[index];
-                  // AJOUTE CES PRINTS
-  print('🔵 RESERVATION ${reservation.id}:');
-  print('   - Statut: ${reservation.statut}');
-  print('   - isEnAttente: ${reservation.isEnAttente}');
-  print('   - dateConfirmee: ${reservation.dateConfirmee}');
-  print('   - heureConfirmee: ${reservation.heureConfirmee}');
-  print('   - Show Accept Button: ${reservation.isEnAttente && reservation.dateConfirmee != null && reservation.heureConfirmee != null}');
+                
+                // PRINTS DE DEBUG
+                print('🔵 RESERVATION ${reservation.id}:');
+                print('   - Statut: ${reservation.statut}');
+                print('   - isEnAttente: ${reservation.isEnAttente}');
+                print('   - isPropositionEnvoyee: ${reservation.isPropositionEnvoyee}');
+                print('   - dateConfirmee: ${reservation.dateConfirmee}');
+                print('   - heureConfirmee: ${reservation.heureConfirmee}');
+                print('   - Show Accept Button: ${reservation.isPropositionEnvoyee}');
+                
                 return ReservationCard(
-  reservation: reservation,
-  onCancel: reservation.isEnAttente
-      ? () => _handleCancel(reservation)
-      : null,
-  onAcceptProposal: (reservation.isEnAttente && 
-      reservation.dateConfirmee != null && 
-      reservation.heureConfirmee != null)
-      ? () => _handleAcceptProposal(reservation)
-      : null,
-);
+                  reservation: reservation,
+                  onCancel: (reservation.isEnAttente || reservation.isPropositionEnvoyee)
+                      ? () => _handleCancel(reservation)
+                      : null,
+                  onAcceptProposal: reservation.isPropositionEnvoyee
+                      ? () => _handleAcceptProposal(reservation)
+                      : null,
+                );
               },
             ),
           );
@@ -123,12 +124,12 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(reservation.isEnAttente 
-            ? 'Annuler la réservation ?' 
-            : 'Refuser la proposition ?'),
-        content: Text(reservation.isEnAttente
-            ? 'Êtes-vous sûr de vouloir annuler cette demande ?'
-            : 'Êtes-vous sûr de refuser la proposition de l\'admin ?'),
+        title: Text(reservation.isPropositionEnvoyee 
+            ? 'Refuser la proposition ?' 
+            : 'Annuler la réservation ?'),
+        content: Text(reservation.isPropositionEnvoyee
+            ? 'Êtes-vous sûr de refuser la proposition de l\'admin ?'
+            : 'Êtes-vous sûr de vouloir annuler cette demande ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -151,9 +152,9 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(reservation.isEnAttente 
-              ? 'Réservation annulée' 
-              : 'Proposition refusée'),
+          content: Text(reservation.isPropositionEnvoyee 
+              ? 'Proposition refusée' 
+              : 'Réservation annulée'),
           backgroundColor: Colors.green,
         ),
       );

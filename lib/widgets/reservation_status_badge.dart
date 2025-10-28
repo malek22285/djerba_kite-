@@ -50,6 +50,8 @@ class ReservationStatusBadge extends StatelessWidget {
         return Colors.green;
       case 'refusee':
         return Colors.red;
+      case 'proposition_envoyee':
+        return Colors.blue;  
       case 'annulee':
         return Colors.grey;
       default:
@@ -65,6 +67,8 @@ class ReservationStatusBadge extends StatelessWidget {
         return Icons.check_circle;
       case 'refusee':
         return Icons.cancel;
+      case 'proposition_envoyee':
+        return Icons.schedule_send;
       case 'annulee':
         return Icons.block;
       default:
@@ -82,6 +86,8 @@ class ReservationStatusBadge extends StatelessWidget {
         return 'Refusée';
       case 'annulee':
         return 'Annulée';
+      case 'proposition_envoyee':
+        return 'Proposition';
       default:
         return 'Inconnu';
     }

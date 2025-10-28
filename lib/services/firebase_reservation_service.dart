@@ -116,6 +116,34 @@ class FirebaseReservationService {
       }).toList();
     });
   }
+  // ========================================
+// ADMIN: Propositions en attente de réponse client
+// ========================================
+Stream<List<Reservation>> getProposedReservations() {
+  print('🔵 RESERVATION: Stream propositions en attente');
+  
+  return _firestore
+      .collection(_collection)
+      .where('statut', isEqualTo: 'proposition_envoyee')
+      .orderBy('created_at', descending: true)
+      .snapshots()
+      .map((snapshot) {
+    print('✅ RESERVATION: ${snapshot.docs.length} propositions en attente');
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return Reservation.fromMap({
+        ...data,
+        'date_demande': (data['date_demande'] as Timestamp).toDate().toIso8601String(),
+        'date_confirmee': data['date_confirmee'] != null 
+            ? (data['date_confirmee'] as Timestamp).toDate().toIso8601String()
+            : null,
+        'created_at': data['created_at'] != null
+            ? (data['created_at'] as Timestamp).toDate().toIso8601String()
+            : DateTime.now().toIso8601String(),
+      }, doc.id);
+    }).toList();
+  });
+}
 
   // ========================================
   // ADMIN: Toutes les réservations
@@ -238,27 +266,28 @@ print('🔵 DEBUG: stage_duree = ${reservationData['stage_duree']}');
   // ========================================
   // ADMIN: Proposer une autre date
   // ========================================
-  Future<void> proposeAlternative(
-    String id,
-    DateTime date,
-    String heure,
-    String notes,
-  ) async {
-    try {
-      print('🔵 RESERVATION: Proposition $id pour $date à $heure');
-      
-      await _firestore.collection(_collection).doc(id).update({
-        'date_confirmee': Timestamp.fromDate(date),
-        'heure_confirmee': heure,
-        'notes_admin': notes,
-      });
+ Future<void> proposeAlternative(
+  String id,
+  DateTime date,
+  String heure,
+  String notes,
+) async {
+  try {
+    print('🔵 RESERVATION: Proposition $id pour $date à $heure');
+    
+    await _firestore.collection(_collection).doc(id).update({
+      'statut': 'proposition_envoyee',  // ← AJOUTÉ
+      'date_confirmee': Timestamp.fromDate(date),
+      'heure_confirmee': heure,
+      'notes_admin': notes,
+    });
 
-      print('✅ RESERVATION: Proposition envoyée');
-    } catch (e) {
-      print('❌ RESERVATION ERROR: $e');
-      throw Exception('Erreur proposition: $e');
-    }
+    print('✅ RESERVATION: Proposition envoyée (statut = proposition_envoyee)');
+  } catch (e) {
+    print('❌ RESERVATION ERROR: $e');
+    throw Exception('Erreur proposition: $e');
   }
+}
 
   // ========================================
   // ADMIN: Refuser une demande

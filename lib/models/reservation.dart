@@ -47,6 +47,7 @@ class Reservation {
   bool get isConfirmee => statut == 'confirmee';
   bool get isRefusee => statut == 'refusee';
   bool get isAnnulee => statut == 'annulee';
+  bool get isPropositionEnvoyee => statut == 'proposition_envoyee';
 
   factory Reservation.fromMap(Map<String, dynamic> map, String id) {
     return Reservation(
