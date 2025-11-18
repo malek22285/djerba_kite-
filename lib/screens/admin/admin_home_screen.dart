@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/local_auth_service.dart';
+import '../../services/currency_service.dart'; 
 import '../auth/login_screen.dart';
 import 'tabs/demandes_tab.dart';
 import 'tabs/propositions_tab.dart';
@@ -7,6 +8,7 @@ import 'tabs/planning_tab.dart';
 import 'tabs/stages_tab.dart';
 import 'tabs/vouchers_tab.dart';
 import 'tabs/stats_tab.dart';
+import 'tabs/settings_tab.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   @override
@@ -19,12 +21,21 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   final List<Widget> _tabs = [
     DemandesTab(),
-    PropositionsTab(),  // ← AJOUTÉ
+    PropositionsTab(),
     PlanningTab(),
     StagesTab(),
     VouchersTab(),
     StatsTab(),
+    SettingsTab(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +68,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             label: 'Demandes',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.schedule_send),  // ← AJOUTÉ
+            icon: Icon(Icons.schedule_send),
             label: 'Propositions',
           ),
           BottomNavigationBarItem(
@@ -76,6 +87,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             icon: Icon(Icons.bar_chart),
             label: 'Stats',
           ),
+              BottomNavigationBarItem(  // ← NOUVEAU
+              icon: Icon(Icons.settings),
+             label: 'Paramètres',
+        ),
         ],
       ),
     );

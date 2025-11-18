@@ -6,6 +6,7 @@ import '../../widgets/gradient_header.dart';
 import '../../widgets/info_section.dart';
 import '../../widgets/bottom_action_button.dart';
 import 'reservation_screen.dart';
+import '../../widgets/currency_price_display.dart';
 
 class StageDetailScreen extends StatelessWidget {
   final Stage stage;
@@ -81,14 +82,14 @@ class StageDetailScreen extends StatelessWidget {
           SizedBox(height: 24),
           
           // Prix
-          InfoSection(
-            title: 'Tarif',
-            child: PrixDisplay(
-              stage: stage,
-              prixFontSize: 32,
-              eurFontSize: 16,
-            ),
-          ),
+         // Prix
+        InfoSection(
+          title: 'Tarif',
+          child: LargePriceDisplay(
+          prixTnd: stage.prixTnd,
+          prixEur: stage.prixEur,
+             ),
+         ),
         ],
       ),
     );

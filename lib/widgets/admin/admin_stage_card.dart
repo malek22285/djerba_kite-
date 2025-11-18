@@ -92,7 +92,7 @@ class AdminStageCard extends StatelessWidget {
                 _buildChip(Icons.access_time, '${stage.duree}h'),
                 _buildChip(
                   Icons.payments,
-                  '${stage.prixTnd.toStringAsFixed(0)} TND (≈${prixEur.toStringAsFixed(0)} EUR)',
+                  '${(stage.prixTnd ?? 0).toStringAsFixed(0)} TND',
                 ),
                 _buildChip(Icons.show_chart, stage.niveauRequis),
                 if (stage.remisePourcentage > 0)

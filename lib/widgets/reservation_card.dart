@@ -101,13 +101,14 @@ class ReservationCard extends StatelessWidget {
         if (reservation.isPropositionEnvoyee && reservation.dateConfirmee != null) ...[
           Container(
             padding: EdgeInsets.all(12),
-            margin: EdgeInsets.only(bottom: 12),
+            constraints: BoxConstraints(minHeight: 80),
             decoration: BoxDecoration(
               color: Colors.orange[50],
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.orange[300]!),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(

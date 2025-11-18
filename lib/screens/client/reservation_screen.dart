@@ -9,6 +9,7 @@ import '../../widgets/date_time_picker.dart';
 import '../../widgets/reservation_button.dart';
 import '../../widgets/stage_info_card.dart';
 import '../../widgets/voucher_validation_widget.dart';
+import '../../widgets/currency_price_display.dart';
 
 class ReservationScreen extends StatefulWidget {
   final Stage stage;
@@ -60,105 +61,112 @@ class _ReservationScreenState extends State<ReservationScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Réserver un stage'),
-        backgroundColor: Color(0xFF2a5298),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              StageInfoCard(stage: widget.stage),
-              SizedBox(height: 24),
-              
-              Text(
-                'Informations de réservation',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Réserver un stage'),
+      backgroundColor: Color(0xFF2a5298),
+    ),
+    body: SingleChildScrollView(
+      padding: EdgeInsets.all(20),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            StageInfoCard(stage: widget.stage),
+            SizedBox(height: 24),
+            
+            Text(
+              'Informations de réservation',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16),
+            
+            DateTimePicker(
+              label: 'Date souhaitée *',
+              icon: Icons.calendar_today,
+              selectedDate: _selectedDate,
+              onTap: _pickDate,
+              isDate: true,
+            ),
+            SizedBox(height: 16),
+            
+            DateTimePicker(
+              label: 'Heure souhaitée *',
+              icon: Icons.access_time,
+              selectedTime: _selectedTime,
+              onTap: _pickTime,
+              isDate: false,
+            ),
+            SizedBox(height: 16),
+            
+            DropdownButtonFormField<String>(
+              value: _selectedNiveau,
+              decoration: InputDecoration(
+                labelText: 'Votre niveau *',
+                prefixIcon: Icon(Icons.show_chart, color: Color(0xFF2a5298)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
-              SizedBox(height: 16),
+              items: _niveaux.map((niveau) {
+                return DropdownMenuItem(value: niveau, child: Text(niveau));
+              }).toList(),
+              onChanged: (value) => setState(() => _selectedNiveau = value!),
+            ),
+            SizedBox(height: 16),
+            
+            CustomTextField(
+              controller: _phoneController,
+              label: 'Numéro de téléphone *',
+              icon: Icons.phone,
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Téléphone requis';
+                if (value.length < 8) return 'Numéro invalide';
+                return null;
+              },
+            ),
+            SizedBox(height: 24),
+            
+            VoucherValidationWidget(
+              stage: widget.stage,
+              controller: _voucherController,
+              onVoucherValidated: (voucher) {
+                print('🔵 SCREEN: Callback reçu');
+                print('🔵 SCREEN: voucher id = ${voucher?.id}');
+                print('🔵 SCREEN: voucher code = ${voucher?.code}');
+                
+                setState(() {
+                  _validatedVoucher = voucher;
+                });
+                
+                print('🔵 SCREEN: _validatedVoucher maintenant = ${_validatedVoucher?.id}');
+              },
+            ),
+            SizedBox(height: 16),
+            
+            CompactPriceDisplay(
+               prixTnd: widget.stage.prixTnd,  // ✅ Prix réel du stage
+               prixEur: widget.stage.prixEur,
+            ),
+            
+            SizedBox(height: 32),
               
-              DateTimePicker(
-                label: 'Date souhaitée *',
-                icon: Icons.calendar_today,
-                selectedDate: _selectedDate,
-                onTap: _pickDate,
-                isDate: true,
-              ),
-              SizedBox(height: 16),
-              
-              DateTimePicker(
-                label: 'Heure souhaitée *',
-                icon: Icons.access_time,
-                selectedTime: _selectedTime,
-                onTap: _pickTime,
-                isDate: false,
-              ),
-              SizedBox(height: 16),
-              
-              DropdownButtonFormField<String>(
-                value: _selectedNiveau,
-                decoration: InputDecoration(
-                  labelText: 'Votre niveau *',
-                  prefixIcon: Icon(Icons.show_chart, color: Color(0xFF2a5298)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-                items: _niveaux.map((niveau) {
-                  return DropdownMenuItem(value: niveau, child: Text(niveau));
-                }).toList(),
-                onChanged: (value) => setState(() => _selectedNiveau = value!),
-              ),
-              SizedBox(height: 16),
-              
-              CustomTextField(
-                controller: _phoneController,
-                label: 'Numéro de téléphone *',
-                icon: Icons.phone,
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Téléphone requis';
-                  if (value.length < 8) return 'Numéro invalide';
-                  return null;
-                },
-              ),
-              SizedBox(height: 24),
-              
-             VoucherValidationWidget(
-  stage: widget.stage,
-  controller: _voucherController,
-  onVoucherValidated: (voucher) {
-    print('🔵 SCREEN: Callback reçu');
-    print('🔵 SCREEN: voucher id = ${voucher?.id}');
-    print('🔵 SCREEN: voucher code = ${voucher?.code}');
-    
-    setState(() {
-      _validatedVoucher = voucher;
-    });
-    
-    print('🔵 SCREEN: _validatedVoucher maintenant = ${_validatedVoucher?.id}');
-  },
-),
-              SizedBox(height: 32),
-              
-              ReservationButton(
-                text: 'Envoyer la demande',
-                onPressed: _handleSubmit,
-                isLoading: _isLoading,
-              ),
-            ],
-          ),
+            ReservationButton(
+              text: 'Envoyer la demande',
+              onPressed: _handleSubmit,
+              isLoading: _isLoading,
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _pickDate() async {
     final now = DateTime.now();

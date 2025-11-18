@@ -161,7 +161,7 @@ Future<void> _loadStages() async {
         nom: stage.nom,
         description: stage.description,
         duree: stage.duree,
-        prixTnd: stage.prixTnd,
+        prixTnd: stage.prixTnd ?? stage.prixEur ?? 0,  
         niveauRequis: stage.niveauRequis,
         remisePourcentage: stage.remisePourcentage,
         actif: true,

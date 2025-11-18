@@ -26,7 +26,7 @@ class PrixDisplay extends StatelessWidget {
         // Prix barré si remise
         if (hasRemise) ...[
           Text(
-            '${stage.prixTnd.toStringAsFixed(0)} TND',
+            '${(stage.prixTnd ?? 0).toStringAsFixed(0)} TND',  // ✅ Utilise la nouvelle méthode
             style: TextStyle(
               decoration: TextDecoration.lineThrough,
               color: Colors.grey,
