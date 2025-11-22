@@ -502,4 +502,60 @@ print('🔵 DEBUG: stage_duree = ${reservationData['stage_duree']}');
       return [];
     }
   }
+  /// Marquer une réservation comme terminée (fin de séance)
+Future<void> markAsCompleted(String reservationId) async {
+  try {
+    print('🔵 RESERVATION: Marquage terminée - $reservationId');
+    
+    await _firestore.collection(_collection).doc(reservationId).update({
+      'statut': 'terminee',
+      'date_terminee': FieldValue.serverTimestamp(),
+    });
+    
+    print('✅ RESERVATION: Marquée comme terminée');
+  } catch (e) {
+    print('❌ RESERVATION ERROR: $e');
+    throw e;
+  }
+}
+Future<List<Reservation>> getConfirmedReservationsForDay(
+  int year,
+  int month,
+  int day,
+) async {
+  try {
+    print('🔵 RESERVATION: Récupération confirmées $day/$month/$year');
+    
+    final startDate = DateTime(year, month, day);
+    final endDate = DateTime(year, month, day, 23, 59, 59);
+    
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('statut', isEqualTo: 'confirmee')
+        .where('date_confirmee', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('date_confirmee', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+        .orderBy('date_confirmee')
+        .orderBy('heure_confirmee')
+        .get();
+    
+    print('✅ RESERVATION: ${snapshot.docs.length} confirmées trouvées');
+    
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return Reservation.fromMap({
+        ...data,
+        'date_demande': (data['date_demande'] as Timestamp).toDate().toIso8601String(),
+        'date_confirmee': data['date_confirmee'] != null 
+            ? (data['date_confirmee'] as Timestamp).toDate().toIso8601String()
+            : null,
+        'created_at': data['created_at'] != null
+            ? (data['created_at'] as Timestamp).toDate().toIso8601String()
+            : DateTime.now().toIso8601String(),
+      }, doc.id);
+    }).toList();
+  } catch (e) {
+    print('❌ RESERVATION ERROR: $e');
+    return [];
+  }
+}
 }

@@ -49,8 +49,8 @@ class CalendarDayCell extends StatelessWidget {
                 bottom: 2,
                 right: 2,
                 child: Container(
-                  constraints: BoxConstraints(minWidth: 18, minHeight: 18),  // ← CORRIGÉ
-                  padding: EdgeInsets.all(3),  // ← CORRIGÉ
+                  constraints: BoxConstraints(minWidth: 18, minHeight: 18),
+                  padding: EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     color: Colors.blue,
                     shape: BoxShape.circle,
@@ -60,7 +60,7 @@ class CalendarDayCell extends StatelessWidget {
                       '$reservationCount',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 10,  // ← RÉDUIT
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

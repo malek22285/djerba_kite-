@@ -17,31 +17,26 @@ class CalendarGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final daysInMonth = DateUtils.getDaysInMonth(
-      currentMonth.year,
-      currentMonth.month,
-    );
-    final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
-    final firstWeekday = firstDayOfMonth.weekday;
-    
-    final today = DateTime.now();
-    final isCurrentMonth = currentMonth.year == today.year && 
-                          currentMonth.month == today.month;
-
-    return Container(
-      padding: EdgeInsets.all(8),
-      child: Column(
-        children: [
-          _buildWeekdayLabels(),
-          SizedBox(height: 8),
-          _buildDaysGrid(
-            daysInMonth,
-            firstWeekday,
-            today,
-            isCurrentMonth,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          padding: EdgeInsets.all(8),
+          child: Column(
+            children: [
+              _buildWeekdayLabels(),
+              SizedBox(height: 8),
+              _buildDaysGrid(
+                DateUtils.getDaysInMonth(currentMonth.year, currentMonth.month),
+                DateTime(currentMonth.year, currentMonth.month, 1).weekday,
+                DateTime.now(),
+                currentMonth.year == DateTime.now().year && 
+                currentMonth.month == DateTime.now().month,
+                constraints.maxWidth,
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -69,6 +64,7 @@ class CalendarGrid extends StatelessWidget {
     int firstWeekday,
     DateTime today,
     bool isCurrentMonth,
+    double maxWidth,
   ) {
     return GridView.builder(
       shrinkWrap: true,
@@ -84,7 +80,7 @@ class CalendarGrid extends StatelessWidget {
         final dayNumber = index - firstWeekday + 2;
         
         if (dayNumber < 1 || dayNumber > daysInMonth) {
-          return CalendarDayCell();
+          return SizedBox.shrink();
         }
         
         final date = DateTime(currentMonth.year, currentMonth.month, dayNumber);

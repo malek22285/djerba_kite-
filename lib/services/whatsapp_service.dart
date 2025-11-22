@@ -29,6 +29,15 @@ class WhatsAppService {
     final message = _buildRejectionMessage(reservation, reason);
     return _sendMessage(phoneNumber, message);
   }
+  /// Envoyer demande d'avis après fin de séance
+static Future<bool> sendFeedbackRequestMessage({
+  required String phoneNumber,
+  required String userName,
+  required String stageName,
+}) async {
+  final message = _buildFeedbackMessage(userName, stageName);
+  return _sendMessage(phoneNumber, message);
+}
 
   /// Message de confirmation
   static String _buildConfirmationMessage(Reservation reservation) {
@@ -121,4 +130,20 @@ N\'hésitez pas à nous contacter pour d\'autres dates disponibles.
       return false;
     }
   }
+  static String _buildFeedbackMessage(String userName, String stageName) {
+  return '''
+🌊 *Merci ${userName} !*
+
+Votre stage "$stageName" est terminé ! Nous espérons que vous avez passé un excellent moment avec DjerbaKite 🪁
+
+📝 *Votre avis compte beaucoup pour nous !*
+
+Merci de partager votre expérience :
+
+👍 Laissez-nous un avis sur Facebook : 
+https://www.facebook.com/DjerbaKite/reviews
+
+À très bientôt sur les vagues ! 🏄‍♂️
+''';
+}
 }

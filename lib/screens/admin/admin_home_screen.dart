@@ -4,11 +4,11 @@ import '../../services/currency_service.dart';
 import '../auth/login_screen.dart';
 import 'tabs/demandes_tab.dart';
 import 'tabs/propositions_tab.dart';
-import 'tabs/planning_tab.dart';
 import 'tabs/stages_tab.dart';
 import 'tabs/vouchers_tab.dart';
 import 'tabs/stats_tab.dart';
 import 'tabs/settings_tab.dart';
+import 'planning_screen.dart'; 
 
 class AdminHomeScreen extends StatefulWidget {
   @override
@@ -22,11 +22,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   final List<Widget> _tabs = [
     DemandesTab(),
     PropositionsTab(),
-    PlanningTab(),
+    PlanningScreen(),
     StagesTab(),
     VouchersTab(),
     StatsTab(),
     SettingsTab(),
+
   ];
 
   @override
