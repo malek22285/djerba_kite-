@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/reservation.dart';
 import 'firebase_voucher_service.dart';
-
+import 'firebase_auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 class FirebaseReservationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _collection = 'reservations';
@@ -24,6 +25,7 @@ class FirebaseReservationService {
     String? voucherId,
     String? voucherCode,
     double remiseIndividuelle = 0,
+    
   }) async {
     try {
       print('🔵 RESERVATION: Création demande...');
@@ -469,6 +471,103 @@ print('🔵 DEBUG: stage_duree = ${reservationData['stage_duree']}');
   }
 
   // ========================================
+  // ADMIN: Stats pour une période personnalisée
+  // ========================================
+
+Future<Map<String, dynamic>> getStatsForPeriod(
+  DateTime startDate, 
+  DateTime endDate, 
+  {
+    bool includeAnnulees = false,
+    List<String> stageTypes = const [],
+    double? minPrice,
+    double? maxPrice,
+  }
+) async {
+  try {
+    print('🔵 STATS: Récupération pour période ${startDate.day}/${startDate.month} - ${endDate.day}/${endDate.month}');
+    
+    // Construction de la requête de base
+    Query query = _firestore.collection(_collection)
+        .where('date_confirmee', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('date_confirmee', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+
+    // Filtres optionnels
+    if (!includeAnnulees) {
+      query = query.where('statut', isEqualTo: 'confirmee');
+    }
+    
+    if (stageTypes.isNotEmpty) {
+      query = query.where('stage_name', whereIn: stageTypes);
+    }
+
+    // Exécution de la requête
+    final snapshot = await query.get();
+
+    // Calculs de statistiques
+    double chiffreAffaires = 0;
+    int totalReservations = 0;
+    Map<String, int> repartitionStages = {};
+    List<int> weeklyReservations = List.filled(4, 0);
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final date = (data['date_confirmee'] as Timestamp).toDate();
+      final prix = (data['prix_final'] as num?)?.toDouble() ?? 0;
+      final stageName = data['stage_name'] as String? ?? 'Inconnu';
+
+      // Filtres additionnels de prix
+      if (minPrice != null && prix < minPrice) continue;
+      if (maxPrice != null && prix > maxPrice) continue;
+
+      chiffreAffaires += prix;
+      totalReservations++;
+      
+      // Répartition par stage
+      repartitionStages[stageName] = (repartitionStages[stageName] ?? 0) + 1;
+
+      // Calcul réservations par semaine
+      int week = ((date.difference(startDate).inDays) ~/ 7);
+      if (week >= 0 && week < 4) {
+        weeklyReservations[week]++;
+      }
+    }
+
+    // Calcul des demandes totales pour taux de conversion
+    final totalDemandesSnapshot = await _firestore
+        .collection(_collection)
+        .where('date_demande', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('date_demande', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+        .get();
+
+    final tauxConversion = totalDemandesSnapshot.docs.isNotEmpty 
+      ? (totalReservations / totalDemandesSnapshot.docs.length * 100).toStringAsFixed(1)
+      : '0';
+
+    final stats = {
+      'totalReservations': totalReservations,
+      'chiffreAffaires': chiffreAffaires,
+      'revenuMoyen': totalReservations > 0 ? chiffreAffaires / totalReservations : 0,
+      'tauxConversion': tauxConversion,
+      'repartitionStages': repartitionStages,
+      'weeklyReservations': weeklyReservations,
+    };
+    
+    print('✅ STATS: $stats');
+    return stats;
+  } catch (e) {
+    print('❌ STATS ERROR: $e');
+    return {
+      'totalReservations': 0,
+      'chiffreAffaires': 0.0,
+      'revenuMoyen': 0.0,
+      'tauxConversion': '0',
+      'repartitionStages': {},
+      'weeklyReservations': [0, 0, 0, 0],
+    };
+  }
+}
+  // ========================================
   // LEGACY: Récupérer réservations par email
   // ========================================
   Future<List<Reservation>> getUserReservations(String userEmail) async {
@@ -556,6 +655,59 @@ Future<List<Reservation>> getConfirmedReservationsForDay(
   } catch (e) {
     print('❌ RESERVATION ERROR: $e');
     return [];
+  }
+}
+  // ========================================
+  // ADMIN: Créer une réservation passager
+  // ========================================
+Future<String> createPassagerReservation({
+  required String userName,
+  required String userPhone,
+  required String stageId,
+  required String stageName,
+  required int stageDuree,
+  required DateTime dateDemande,
+  required String heureDemande,
+  required String niveauClient,
+  required double prixFinal,
+  bool confirmerDirectement = false,
+  String? notesAdmin,
+}) async {
+  try {
+    print('🔵 PASSAGER: Création ${confirmerDirectement ? "confirmée" : "en attente"}');
+    
+    final data = {
+      'user_id': null,
+      'user_email': 'passager@local',
+      'user_name': userName,
+      'user_phone': userPhone,
+      'stage_id': stageId,
+      'stage_name': stageName,
+      'stage_duree': stageDuree,
+      'date_demande': Timestamp.fromDate(dateDemande),
+      'heure_demande': heureDemande,
+      'statut': confirmerDirectement ? 'confirmee' : 'en_attente',
+      'niveau_client': niveauClient,
+      'prix_final': prixFinal,
+      'notes_admin': notesAdmin,
+      'created_at': FieldValue.serverTimestamp(),
+      'is_passager': true,
+      'created_by_admin': FirebaseAuth.instance.currentUser?.uid,
+      
+      // Si confirmé directement
+      if (confirmerDirectement) ...{
+        'date_confirmee': Timestamp.fromDate(dateDemande),
+        'heure_confirmee': heureDemande,
+      },
+    };
+    
+    final docRef = await _firestore.collection(_collection).add(data);
+    
+    print('✅ PASSAGER: ${confirmerDirectement ? "Confirmée" : "Demande créée"} ${docRef.id}');
+    return docRef.id;
+  } catch (e) {
+    print('❌ PASSAGER ERROR: $e');
+    throw e;
   }
 }
 }

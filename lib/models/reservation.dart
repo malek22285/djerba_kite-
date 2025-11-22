@@ -19,6 +19,8 @@ class Reservation {
   final double remiseIndividuelle;
   final DateTime createdAt;
   final int stageDuree;
+  bool isPassager;
+  String? createdByAdmin;
 
   Reservation({
     required this.id,
@@ -41,6 +43,8 @@ class Reservation {
     this.remiseIndividuelle = 0,
     required this.createdAt,
     required this.stageDuree,
+    this.isPassager = false,
+    this.createdByAdmin,
   });
 
   bool get isEnAttente => statut == 'en_attente';
@@ -73,6 +77,8 @@ class Reservation {
       remiseIndividuelle: (map['remise_individuelle'] ?? 0).toDouble(),
       createdAt: DateTime.parse(map['created_at']),
       stageDuree: map['stage_duree'] ?? 3, // défaut 3 heures
+      isPassager: map['is_passager'] ?? false,
+      createdByAdmin: map['created_by_admin'],
     );
   }
 
@@ -97,6 +103,8 @@ class Reservation {
       'remise_individuelle': remiseIndividuelle,
       'created_at': createdAt.toIso8601String(),
       'stage_duree': stageDuree,
+      'is_passager': isPassager,
+      'created_by_admin': createdByAdmin,
     };
   }
   Reservation copyWith({

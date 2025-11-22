@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import '../../../services/firebase_reservation_service.dart';
 import '../../../widgets/admin/stat_card.dart';
 import '../../../widgets/admin/stage_repartition_card.dart';
+import '../../../widgets/stats_line_chart.dart'; // Nouveau widget
+import '../../../widgets/period_selector.dart'; // Nouveau widget
 
 class StatsTab extends StatefulWidget {
   @override
@@ -10,42 +12,40 @@ class StatsTab extends StatefulWidget {
 }
 
 class _StatsTabState extends State<StatsTab> {
-  // 1. Initialisation du service (corrigée)
   final _reservationService = FirebaseReservationService();
   
-  DateTime _selectedMonth = DateTime.now();
   Map<String, dynamic>? _stats;
   bool _isLoading = true;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _isCustomPeriod = false;
 
   @override
   void initState() {
     super.initState();
-    // Assurer que la locale 'fr_FR' est disponible
-    Intl.defaultLocale = 'fr_FR'; 
-    _loadStats();
+    // Charger les stats du mois par défaut
+    _loadStats(DateTime.now(), DateTime.now());
   }
 
-  Future<void> _loadStats() async {
+  Future<void> _loadStats(DateTime start, DateTime end, {bool isCustom = false}) async {
     setState(() => _isLoading = true);
     
-    // 2. Appel de la méthode avec les deux arguments requis (corrigé)
     try {
-      final stats = await _reservationService.getStatsForMonth(
-        _selectedMonth.year,
-        _selectedMonth.month,
-      );
+      final stats = await _reservationService.getStatsForPeriod(start, end);
       
       setState(() {
         _stats = stats;
+        _startDate = start;
+        _endDate = end;
+        _isCustomPeriod = isCustom;
         _isLoading = false;
       });
     } catch (e) {
       print('Erreur lors du chargement des stats: $e');
       setState(() {
         _isLoading = false;
-        _stats = {}; // Initialise à une map vide en cas d'erreur
+        _stats = null;
       });
-      // Optionnel: Afficher un SnackBar ou un dialogue d'erreur
     }
   }
 
@@ -53,74 +53,41 @@ class _StatsTabState extends State<StatsTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildHeader(),
+        // Nouveau sélecteur de période
+        PeriodSelector(
+          onPeriodChanged: (start, end, {isCustom = false}) {
+            _loadStats(start, end, isCustom: isCustom);
+          }
+        ),
+        
         Expanded(
           child: _isLoading
               ? Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _loadStats,
-                  child: _buildContent(),
-                ),
+              : _buildStatsContent(),
         ),
       ],
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.chevron_left),
-            onPressed: _previousMonth,
-          ),
-          Expanded(
-            child: Text(
-              DateFormat('MMMM yyyy').format(_selectedMonth), // 'fr_FR' n'est pas nécessaire si Intl.defaultLocale est défini
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.chevron_right),
-            onPressed: _nextMonth,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContent() {
+  Widget _buildStatsContent() {
     if (_stats == null || _stats!.isEmpty) {
       return Center(
-        child: Text('Aucune donnée statistique disponible pour ce mois.'),
+        child: Text('Aucune donnée statistique disponible'),
       );
     }
 
-    // Sécurisation des valeurs pour éviter le NoSuchMethodError (le crash)
+    // Extraction sécurisée des données
     final totalReservations = _stats!['totalReservations'] ?? 0;
     final chiffreAffaires = _stats!['chiffreAffaires'] ?? 0.0;
-    final vouchersUtilises = _stats!['vouchersUtilises'] ?? 0;
+    final revenuMoyen = _stats!['revenuMoyen'] ?? 0.0;
+    final tauxConversion = _stats!['tauxConversion'] ?? '0';
+    final weeklyReservations = _stats!['weeklyReservations'] ?? [0, 0, 0, 0];
     final repartitionStages = Map<String, int>.from(_stats!['repartitionStages'] ?? {});
-    
-    // Calcul sécurisé du revenu moyen
-    final revenuMoyen = totalReservations > 0 ? (chiffreAffaires / totalReservations) : 0.0;
 
     return ListView(
       padding: EdgeInsets.all(16),
       children: [
-        // Cartes principales
+        // Métriques clés
         GridView.count(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
@@ -137,26 +104,34 @@ class _StatsTabState extends State<StatsTab> {
             ),
             StatCard(
               title: 'Chiffre d\'affaires',
-              // 3. Utilisation sécurisée de toStringAsFixed(0)
-              value: '${chiffreAffaires.toStringAsFixed(0)} TND', 
+              value: '${chiffreAffaires.toStringAsFixed(0)} TND',
               icon: Icons.payments,
               color: Color(0xFF2a5298),
             ),
             StatCard(
-              title: 'Vouchers utilisés',
-              value: '$vouchersUtilises',
-              icon: Icons.confirmation_number,
-              color: Colors.purple,
-            ),
-            StatCard(
               title: 'Revenu moyen',
-              // 3. Utilisation sécurisée du revenu moyen calculé
               value: '${revenuMoyen.toStringAsFixed(0)} TND',
               icon: Icons.trending_up,
               color: Colors.orange,
             ),
+            StatCard(
+              title: 'Taux réservation confirmée',
+              value: '$tauxConversion%',
+              icon: Icons.percent,
+              color: Colors.purple,
+            ),
           ],
         ),
+        
+        SizedBox(height: 20),
+        
+        // Graphique de réservations
+        Text(
+          'Évolution des réservations',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        SizedBox(height: 10),
+
         
         SizedBox(height: 20),
         
@@ -166,19 +141,5 @@ class _StatsTabState extends State<StatsTab> {
         ),
       ],
     );
-  }
-
-  void _previousMonth() {
-    setState(() {
-      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
-    });
-    _loadStats();
-  }
-
-  void _nextMonth() {
-    setState(() {
-      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
-    });
-    _loadStats();
   }
 }
