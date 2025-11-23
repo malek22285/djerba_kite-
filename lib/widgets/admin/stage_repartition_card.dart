@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class StageRepartitionCard extends StatelessWidget {
   final Map<String, int> repartition;
 
-  StageRepartitionCard({required this.repartition});
+  const StageRepartitionCard({Key? key, required this.repartition}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -31,27 +31,30 @@ class StageRepartitionCard extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(20),
         child: Column(
+          mainAxisSize: MainAxisSize.min,  // ← AJOUTÉ: CRITIQUE!
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisSize: MainAxisSize.min,  // ← AJOUTÉ
               children: [
-                Icon(Icons.pie_chart, color: Color(0xFF2a5298)),
+                Icon(Icons.pie_chart, color: Color(0xFF2a5298), size: 20),
                 SizedBox(width: 8),
                 Text(
                   'Répartition par stage',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,  // ← Réduit de 18 à 16
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 16),  // ← Réduit de 20 à 16
             ...sortedEntries.map((entry) {
               final percentage = (entry.value / total * 100).toStringAsFixed(1);
               return Padding(
-                padding: EdgeInsets.only(bottom: 16),
+                padding: EdgeInsets.only(bottom: 12),  // ← Réduit de 16 à 12
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,  // ← AJOUTÉ
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -61,24 +64,25 @@ class StageRepartitionCard extends StatelessWidget {
                           child: Text(
                             entry.key,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,  // ← Réduit de 14 à 13
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        SizedBox(width: 8),  // ← AJOUTÉ: Espace entre nom et pourcentage
                         Text(
                           '${entry.value} ($percentage%)',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,  // ← Réduit de 14 à 13
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF2a5298),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: 6),  // ← Réduit de 8 à 6
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
@@ -87,7 +91,7 @@ class StageRepartitionCard extends StatelessWidget {
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Color(0xFF2a5298),
                         ),
-                        minHeight: 8,
+                        minHeight: 6,  // ← Réduit de 8 à 6
                       ),
                     ),
                   ],

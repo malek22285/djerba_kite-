@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+enum PeriodType {
+  thisWeek,
+  thisMonth,
+  custom
+}
+
 class PeriodSelector extends StatefulWidget {
   final Function(DateTime start, DateTime end, {bool isCustom}) onPeriodChanged;
 
@@ -18,11 +24,15 @@ class _PeriodSelectorState extends State<PeriodSelector> {
   @override
   void initState() {
     super.initState();
-    // Déclencher la période par défaut
-    _updatePeriod(_selectedPeriod);
+    // ← CHANGÉ: Appel APRÈS le build initial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updatePeriod(_selectedPeriod);
+    });
   }
 
   void _updatePeriod(PeriodType period, {DateTime? start, DateTime? end}) {
+    if (!mounted) return;
+    
     DateTime now = DateTime.now();
     DateTime startDate, endDate;
 
@@ -58,7 +68,7 @@ class _PeriodSelectorState extends State<PeriodSelector> {
         : null,
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _selectedPeriod = PeriodType.custom;
         _customStartDate = picked.start;
@@ -75,50 +85,63 @@ class _PeriodSelectorState extends State<PeriodSelector> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // Onglets prédéfinis
-        Expanded(
-          child: Row(
-            children: [
-              _buildPeriodButton(PeriodType.thisMonth, 'Ce mois'),
-              _buildPeriodButton(PeriodType.thisWeek, 'Cette semaine'),
-            ],
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPeriodButton(PeriodType.thisMonth, 'Ce mois'),
           ),
-        ),
-        
-        // Bouton période personnalisée
-        IconButton(
-          icon: Icon(Icons.calendar_today),
-          onPressed: _showDateRangePicker,
-          tooltip: 'Période personnalisée',
-        ),
-      ],
+          SizedBox(width: 8),
+          Expanded(
+            child: _buildPeriodButton(PeriodType.thisWeek, 'Cette semaine'),
+          ),
+          SizedBox(width: 8),
+          IconButton(
+            icon: Icon(Icons.calendar_today, size: 20),
+            onPressed: _showDateRangePicker,
+            tooltip: 'Période personnalisée',
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(minWidth: 40, minHeight: 40),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPeriodButton(PeriodType type, String label) {
     bool isSelected = _selectedPeriod == type;
-    return Expanded(
-      child: TextButton(
-        onPressed: () {
+    return Material(
+      color: isSelected ? Colors.blue : Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: () {
+          if (!mounted) return;
           setState(() {
             _selectedPeriod = type;
           });
           _updatePeriod(type);
         },
-        style: TextButton.styleFrom(
-          backgroundColor: isSelected ? Colors.blue : Colors.transparent,
-          foregroundColor: isSelected ? Colors.white : Colors.blue,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? Colors.white : Colors.blue,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-        child: Text(label),
       ),
     );
   }
-}
-
-enum PeriodType {
-  thisWeek,
-  thisMonth,
-  custom
 }

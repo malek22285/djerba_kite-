@@ -33,8 +33,7 @@ class StatCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,  // ← IMPORTANT
-          mainAxisSize: MainAxisSize.min,  // ← AJOUTÉ: Ajuste automatiquement
+          mainAxisSize: MainAxisSize.min,  // ← IMPORTANT pour éviter erreurs layout
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
@@ -45,27 +44,27 @@ class StatCard extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 24),
             ),
-            Spacer(),  // ← Pousse le texte vers le bas
+            SizedBox(height: 12),  // ← Espacement fixe au lieu de Spacer
             Text(
               value,
               style: TextStyle(
-                fontSize: 28,  // ← Réduit de 32 à 28
+                fontSize: 24,  // ← Réduit pour éviter débordement
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
-              maxLines: 1,  // ← AJOUTÉ: Force sur 1 ligne
-              overflow: TextOverflow.ellipsis,  // ← AJOUTÉ: Coupe si trop long
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: 4),
             Text(
               title,
               style: TextStyle(
-                fontSize: 12,  // ← Réduit de 14 à 12
+                fontSize: 12,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
-              maxLines: 2,  // ← AJOUTÉ: Max 2 lignes
-              overflow: TextOverflow.ellipsis,  // ← AJOUTÉ
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
