@@ -6,6 +6,7 @@ import '../../models/stage.dart';
 import '../../widgets/stage_card.dart';
 import '../auth/login_screen.dart';
 import 'my_reservations_screen.dart';
+import '../../widgets/app_logo.dart'; // Assurez-vous que l'importation existe
 
 class ClientHomeScreen extends StatefulWidget {
   @override
@@ -54,28 +55,43 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('DjerbaKite'),
+        // Utiliser Row pour aligner le logo et le texte
+        title: Row(
+          mainAxisSize: MainAxisSize.min, // S'assurer que la Row prend juste la taille nécessaire
+          children: [
+            AppLogo(height: 30), // Réduire la taille du logo pour la barre d'app
+            SizedBox(width: 8), // Espace entre le logo et le texte
+            Text(
+              'DjerbaKite', 
+              style: TextStyle(
+                fontSize: 20, 
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Color(0xFF2a5298),
         actions: [
-  IconButton(
-    icon: Icon(Icons.history),
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MyReservationsScreen()),
-      );
-    },
-  ),
-  IconButton(
-    icon: Icon(Icons.logout),
-    onPressed: () async {
-      await _authService.signOut();
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => LoginScreen()),
-      );
-    },
-  ),
-],
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => MyReservationsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () async {
+              await _authService.signOut();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())

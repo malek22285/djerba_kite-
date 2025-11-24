@@ -41,28 +41,5 @@ class AuthContainer extends StatelessWidget {
     );
   }
 
-  Widget _buildLogo() {
-    return Column(
-      children: [
-        Text('🪁', style: TextStyle(fontSize: 60)),
-        SizedBox(height: 12),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white70,
-          ),
-        ),
-      ],
-    );
-  }
+  
 }

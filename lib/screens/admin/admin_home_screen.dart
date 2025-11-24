@@ -9,7 +9,7 @@ import 'tabs/vouchers_tab.dart';
 import 'tabs/stats_tab.dart';
 import 'tabs/settings_tab.dart';
 import 'planning_screen.dart'; 
-
+import '../../widgets/app_logo.dart';
 class AdminHomeScreen extends StatefulWidget {
   @override
   _AdminHomeScreenState createState() => _AdminHomeScreenState();
@@ -42,8 +42,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin DjerbaKite'),
-        backgroundColor: Color(0xFF2a5298),
+         title: AppLogo(height: 40),
+  backgroundColor: Color(0xFF2a5298),
+  centerTitle: false,
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
